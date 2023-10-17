@@ -35,6 +35,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_undo_redo_manager.h"
+#include "editor/gui/editor_bottom_panel.h"
 #include "editor/gui/editor_zoom_widget.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
@@ -52,38 +53,26 @@
 #include "scene/gui/texture_rect.h"
 #include "scene/gui/view_panner.h"
 
-class UVEditDialog : public AcceptDialog {
-	GDCLASS(UVEditDialog, AcceptDialog);
-
-	void shortcut_input(const Ref<InputEvent> &p_event) override {
-		const Ref<InputEventKey> k = p_event;
-		if (k.is_valid() && k->is_pressed()) {
-			bool handled = false;
-
-			if (ED_IS_SHORTCUT("ui_undo", p_event)) {
-				EditorNode::get_singleton()->undo();
-				handled = true;
-			}
-
-			if (ED_IS_SHORTCUT("ui_redo", p_event)) {
-				EditorNode::get_singleton()->redo();
-				handled = true;
-			}
-
-			if (handled) {
-				set_input_as_handled();
-			}
-		}
-	}
-};
-
 Node2D *Polygon2DEditor::_get_node() const {
 	return node;
 }
 
 void Polygon2DEditor::_set_node(Node *p_polygon) {
+	CanvasItem *draw = Object::cast_to<CanvasItem>(uv_edit_draw);
+	if (node) {
+		node->disconnect("draw", callable_mp(draw, &CanvasItem::queue_redraw));
+		node->disconnect("draw", callable_mp(this, &Polygon2DEditor::_update_available_modes));
+	}
+
 	node = Object::cast_to<Polygon2D>(p_polygon);
 	_update_polygon_editing_state();
+	uv_edit_draw->queue_redraw();
+	if (node) {
+		_menu_option(MODE_EDIT_UV);
+		// Whenever polygon gets redrawn, there's possible changes for the editor as well.
+		node->connect("draw", callable_mp(draw, &CanvasItem::queue_redraw));
+		node->connect("draw", callable_mp(this, &Polygon2DEditor::_update_available_modes));
+	}
 }
 
 Vector2 Polygon2DEditor::_get_offset(int p_idx) const {
@@ -111,8 +100,6 @@ void Polygon2DEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_READY: {
-			button_uv->set_button_icon(get_editor_theme_icon(SNAME("Uv")));
-
 			uv_button[UV_MODE_CREATE]->set_button_icon(get_editor_theme_icon(SNAME("Edit")));
 			uv_button[UV_MODE_CREATE_INTERNAL]->set_button_icon(get_editor_theme_icon(SNAME("EditInternal")));
 			uv_button[UV_MODE_REMOVE_INTERNAL]->set_button_icon(get_editor_theme_icon(SNAME("RemoveInternal")));
@@ -143,8 +130,8 @@ void Polygon2DEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			if (!is_visible()) {
-				uv_edit->hide();
+			if (uv_edit->is_inside_tree()) {
+				EditorNode::get_bottom_panel()->remove_item(uv_edit);
 			}
 		} break;
 	}
@@ -200,8 +187,6 @@ void Polygon2DEditor::_sync_bones() {
 	undo_redo->add_undo_method(node, "_set_bones", prev_bones);
 	undo_redo->add_do_method(this, "_update_bone_list");
 	undo_redo->add_undo_method(this, "_update_bone_list");
-	undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-	undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 	undo_redo->commit_action();
 }
 
@@ -317,20 +302,7 @@ void Polygon2DEditor::_uv_edit_mode_select(int p_mode) {
 		bone_paint_pos = Vector2(-100000, -100000); //send brush away when switching
 	}
 
-	uv_edit->set_size(uv_edit->get_size()); // Necessary readjustment of the popup window.
 	uv_edit_draw->queue_redraw();
-}
-
-void Polygon2DEditor::_uv_edit_popup_show() {
-	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->connect("version_changed", callable_mp(this, &Polygon2DEditor::_update_available_modes));
-}
-
-void Polygon2DEditor::_uv_edit_popup_hide() {
-	EditorSettings::get_singleton()->set_project_metadata("dialog_bounds", "uv_editor", Rect2(uv_edit->get_position(), uv_edit->get_size()));
-	_cancel_editing();
-	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->disconnect("version_changed", callable_mp(this, &Polygon2DEditor::_update_available_modes));
 }
 
 void Polygon2DEditor::_menu_option(int p_option) {
@@ -345,17 +317,13 @@ void Polygon2DEditor::_menu_option(int p_option) {
 				undo_redo->create_action(TTR("Create UV Map"));
 				undo_redo->add_do_method(node, "set_uv", points);
 				undo_redo->add_undo_method(node, "set_uv", uvs);
-				undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-				undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 				undo_redo->commit_action();
 			}
 
-			const Rect2 bounds = EditorSettings::get_singleton()->get_project_metadata("dialog_bounds", "uv_editor", Rect2());
-			if (bounds.has_area()) {
-				uv_edit->popup(bounds);
-			} else {
-				uv_edit->popup_centered_ratio(0.85);
+			if (!uv_edit->is_inside_tree()) {
+				EditorNode::get_bottom_panel()->add_item(TTR("Polygon"), uv_edit);
 			}
+			EditorNode::get_bottom_panel()->make_item_visible(uv_edit);
 			_update_bone_list();
 			_update_available_modes();
 			get_tree()->connect("process_frame", callable_mp(this, &Polygon2DEditor::_center_view), CONNECT_ONE_SHOT);
@@ -369,8 +337,6 @@ void Polygon2DEditor::_menu_option(int p_option) {
 			undo_redo->create_action(TTR("Create UV Map"));
 			undo_redo->add_do_method(node, "set_uv", points);
 			undo_redo->add_undo_method(node, "set_uv", uvs);
-			undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-			undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 			undo_redo->commit_action();
 		} break;
 		case UVEDIT_UV_TO_POLYGON: {
@@ -383,8 +349,6 @@ void Polygon2DEditor::_menu_option(int p_option) {
 			undo_redo->create_action(TTR("Create Polygon"));
 			undo_redo->add_do_method(node, "set_polygon", uvs);
 			undo_redo->add_undo_method(node, "set_polygon", points);
-			undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-			undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 			undo_redo->commit_action();
 		} break;
 		case UVEDIT_UV_CLEAR: {
@@ -395,8 +359,6 @@ void Polygon2DEditor::_menu_option(int p_option) {
 			undo_redo->create_action(TTR("Create UV Map"));
 			undo_redo->add_do_method(node, "set_uv", Vector<Vector2>());
 			undo_redo->add_undo_method(node, "set_uv", uvs);
-			undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-			undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 			undo_redo->commit_action();
 		} break;
 		case UVEDIT_GRID_SETTINGS: {
@@ -448,8 +410,6 @@ void Polygon2DEditor::_update_polygon_editing_state() {
 void Polygon2DEditor::_commit_action() {
 	// Makes that undo/redoing actions made outside of the UV editor still affect its polygon.
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-	undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 	undo_redo->add_do_method(CanvasItemEditor::get_singleton(), "update_viewport");
 	undo_redo->add_undo_method(CanvasItemEditor::get_singleton(), "update_viewport");
 	undo_redo->commit_action();
@@ -573,8 +533,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 							undo_redo->add_undo_method(node, "_set_bones", uv_create_bones_prev);
 							undo_redo->add_do_method(this, "_update_polygon_editing_state");
 							undo_redo->add_undo_method(this, "_update_polygon_editing_state");
-							undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-							undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 							undo_redo->commit_action();
 							uv_drag = false;
 							uv_create = false;
@@ -626,8 +584,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					undo_redo->add_undo_method(node, "set_internal_vertex_count", internal_vertices);
 					undo_redo->add_do_method(this, "_update_polygon_editing_state");
 					undo_redo->add_undo_method(this, "_update_polygon_editing_state");
-					undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-					undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 					undo_redo->commit_action();
 				}
 
@@ -681,8 +637,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					undo_redo->add_undo_method(node, "set_internal_vertex_count", internal_vertices);
 					undo_redo->add_do_method(this, "_update_polygon_editing_state");
 					undo_redo->add_undo_method(this, "_update_polygon_editing_state");
-					undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-					undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 					undo_redo->commit_action();
 				}
 
@@ -739,8 +693,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 								undo_redo->create_action(TTR("Add Custom Polygon"));
 								undo_redo->add_do_method(node, "set_polygons", polygons);
 								undo_redo->add_undo_method(node, "set_polygons", node->get_polygons());
-								undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-								undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 								undo_redo->commit_action();
 							}
 
@@ -780,8 +732,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 						undo_redo->create_action(TTR("Remove Custom Polygon"));
 						undo_redo->add_do_method(node, "set_polygons", polygons);
 						undo_redo->add_undo_method(node, "set_polygons", node->get_polygons());
-						undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-						undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 						undo_redo->commit_action();
 					}
 				}
@@ -808,8 +758,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 						undo_redo->create_action(TTR("Transform UV Map"));
 						undo_redo->add_do_method(node, "set_uv", node->get_uv());
 						undo_redo->add_undo_method(node, "set_uv", points_prev);
-						undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-						undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 						undo_redo->commit_action();
 					} else if (uv_edit_mode[1]->is_pressed()) {
 						switch (uv_move_current) {
@@ -820,8 +768,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 								undo_redo->create_action(TTR("Transform Polygon"));
 								undo_redo->add_do_method(node, "set_polygon", node->get_polygon());
 								undo_redo->add_undo_method(node, "set_polygon", points_prev);
-								undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-								undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 								undo_redo->commit_action();
 							} break;
 							default: {
@@ -836,8 +782,6 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					undo_redo->create_action(TTR("Paint Bone Weights"));
 					undo_redo->add_do_method(node, "set_bone_weights", bone_painting_bone, node->get_bone_weights(bone_painting_bone));
 					undo_redo->add_undo_method(node, "set_bone_weights", bone_painting_bone, prev_weights);
-					undo_redo->add_do_method(uv_edit_draw, "queue_redraw");
-					undo_redo->add_undo_method(uv_edit_draw, "queue_redraw");
 					undo_redo->commit_action();
 					bone_painting = false;
 				}
@@ -1342,23 +1286,8 @@ Polygon2DEditor::Polygon2DEditor() {
 	use_snap = EditorSettings::get_singleton()->get_project_metadata("polygon_2d_uv_editor", "snap_enabled", false);
 	snap_show_grid = EditorSettings::get_singleton()->get_project_metadata("polygon_2d_uv_editor", "show_grid", false);
 
-	button_uv = memnew(Button);
-	button_uv->set_theme_type_variation("FlatButton");
-	add_child(button_uv);
-	button_uv->set_tooltip_text(TTR("Open Polygon 2D UV editor."));
-	button_uv->connect(SceneStringName(pressed), callable_mp(this, &Polygon2DEditor::_menu_option).bind(MODE_EDIT_UV));
-
 	uv_mode = UV_MODE_EDIT_POINT;
-	uv_edit = memnew(UVEditDialog);
-	uv_edit->set_title(TTR("Polygon 2D UV Editor"));
-	uv_edit->set_process_shortcut_input(true);
-	add_child(uv_edit);
-	uv_edit->connect(SceneStringName(confirmed), callable_mp(this, &Polygon2DEditor::_uv_edit_popup_hide));
-	uv_edit->connect("canceled", callable_mp(this, &Polygon2DEditor::_uv_edit_popup_hide));
-	uv_edit->connect("about_to_popup", callable_mp(this, &Polygon2DEditor::_uv_edit_popup_show));
-
-	VBoxContainer *uv_main_vb = memnew(VBoxContainer);
-	uv_edit->add_child(uv_main_vb);
+	uv_edit = memnew(VBoxContainer);
 	HBoxContainer *uv_mode_hb = memnew(HBoxContainer);
 
 	uv_edit_group.instantiate();
@@ -1394,7 +1323,7 @@ Polygon2DEditor::Polygon2DEditor() {
 
 	uv_mode_hb->add_child(memnew(VSeparator));
 
-	uv_main_vb->add_child(uv_mode_hb);
+	uv_edit->add_child(uv_mode_hb);
 	for (int i = 0; i < UV_MODE_MAX; i++) {
 		uv_button[i] = memnew(Button);
 		uv_button[i]->set_theme_type_variation("FlatButton");
@@ -1450,7 +1379,7 @@ Polygon2DEditor::Polygon2DEditor() {
 	bone_paint_radius->set_value(32);
 
 	HSplitContainer *uv_main_hsc = memnew(HSplitContainer);
-	uv_main_vb->add_child(uv_main_hsc);
+	uv_edit->add_child(uv_main_hsc);
 	uv_main_hsc->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	uv_edit_background = memnew(Panel);

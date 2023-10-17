@@ -79,7 +79,7 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	Polygon2D *node = nullptr;
 
 	UVMode uv_mode;
-	AcceptDialog *uv_edit = nullptr;
+	VBoxContainer *uv_edit = nullptr;
 	Button *uv_button[UV_MODE_MAX];
 	Button *b_snap_enable = nullptr;
 	Button *b_snap_grid = nullptr;
@@ -131,8 +131,6 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 
 	AcceptDialog *error = nullptr;
 
-	Button *button_uv = nullptr;
-
 	bool use_snap;
 	bool snap_show_grid;
 	Vector2 snap_offset;
@@ -158,8 +156,6 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	void _set_snap_step_y(real_t p_val);
 
 	void _uv_edit_mode_select(int p_mode);
-	void _uv_edit_popup_show();
-	void _uv_edit_popup_hide();
 	void _bone_paint_selected(int p_index);
 
 	int _get_polygon_count() const override;
