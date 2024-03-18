@@ -152,13 +152,6 @@ Variant *Dictionary::getptr(const Variant &p_key) {
 	}
 }
 
-void Dictionary::set(const Variant &p_key, const Variant &p_value) {
-	ERR_FAIL_COND_MSG(_p->read_only, "Dictionary is in read-only state.");
-	Variant key = p_key;
-	ERR_FAIL_COND(!_p->typed_key.validate(key, "set"));
-	operator[](key) = p_value;
-}
-
 Variant Dictionary::get_valid(const Variant &p_key) const {
 	Variant key = p_key;
 	ERR_FAIL_COND_V(!_p->typed_key.validate(key, "get_valid"), Variant());
@@ -203,6 +196,16 @@ bool Dictionary::set(const Variant &p_key, const Variant &p_value) {
 	ERR_FAIL_COND_V(!_p->typed_value.validate(value, "set"), false);
 	_p->variant_map[key] = value;
 	return true;
+}
+
+Error Dictionary::set_safe(const Variant &p_key, const Variant &p_value) {
+	ERR_FAIL_COND_V_MSG(_p->read_only, ERR_LOCKED, "Dictionary is in read-only state.");
+	Variant key = p_key;
+	ERR_FAIL_COND_V(!_p->typed_key.validate(key, "set_safe"), ERR_INVALID_PARAMETER);
+	Variant value = p_value;
+	ERR_FAIL_COND_V(!_p->typed_value.validate(value, "set_safe"), ERR_INVALID_PARAMETER);
+	operator[](key) = p_value;
+	return OK;
 }
 
 int Dictionary::size() const {
