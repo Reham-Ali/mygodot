@@ -4840,14 +4840,7 @@ void DisplayServerX11::process_events() {
 
 					WindowID window_id_other = INVALID_WINDOW_ID;
 					Window wd_other_x11_window;
-					if (wd.focused) {
-						// Handle cases where an unfocused popup is open that needs to receive button-up events.
-						WindowID popup_id = _get_focused_window_or_popup();
-						if (popup_id != INVALID_WINDOW_ID && popup_id != window_id) {
-							window_id_other = popup_id;
-							wd_other_x11_window = windows[popup_id].x11_window;
-						}
-					} else {
+					if (!wd.focused) {
 						// Propagate the event to the focused window,
 						// because it's received only on the topmost window.
 						// Note: This is needed for drag & drop to work between windows,
@@ -4970,6 +4963,23 @@ void DisplayServerX11::process_events() {
 					pos = Point2i(windows[focused_window_id].size.width / 2, windows[focused_window_id].size.height / 2);
 				}
 
+				BitField<MouseButtonMask> last_button_state = 0;
+				if (event.xmotion.state & Button1Mask) {
+					last_button_state.set_flag(MouseButtonMask::LEFT);
+				}
+				if (event.xmotion.state & Button2Mask) {
+					last_button_state.set_flag(MouseButtonMask::MIDDLE);
+				}
+				if (event.xmotion.state & Button3Mask) {
+					last_button_state.set_flag(MouseButtonMask::RIGHT);
+				}
+				if (event.xmotion.state & Button4Mask) {
+					last_button_state.set_flag(MouseButtonMask::MB_XBUTTON1);
+				}
+				if (event.xmotion.state & Button5Mask) {
+					last_button_state.set_flag(MouseButtonMask::MB_XBUTTON2);
+				}
+
 				Ref<InputEventMouseMotion> mm;
 				mm.instantiate();
 
@@ -4977,13 +4987,13 @@ void DisplayServerX11::process_events() {
 				if (xi.pressure_supported) {
 					mm->set_pressure(xi.pressure);
 				} else {
-					mm->set_pressure(bool(mouse_get_button_state().has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
+					mm->set_pressure(bool(last_button_state.has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
 				}
 				mm->set_tilt(xi.tilt);
 				mm->set_pen_inverted(xi.pen_inverted);
 
 				_get_key_modifier_state(event.xmotion.state, mm);
-				mm->set_button_mask(mouse_get_button_state());
+				mm->set_button_mask(last_button_state);
 				mm->set_position(pos);
 				mm->set_global_position(pos);
 				mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
