@@ -88,7 +88,7 @@ public:
 
 	void blit_render_targets_to_screen(int p_screen, const BlitToScreen *p_render_targets, int p_amount) override {}
 
-	void end_viewport(bool p_swap_buffers) override {}
+	void gl_end_frame(bool p_swap_buffers) override {}
 
 	void end_frame(bool p_swap_buffers) override {
 		if (p_swap_buffers) {
@@ -104,7 +104,7 @@ public:
 
 	static void make_current() {
 		_create_func = _create_current;
-		low_end = true;
+		low_end = false;
 	}
 
 	uint64_t get_frame_number() const override { return frame; }

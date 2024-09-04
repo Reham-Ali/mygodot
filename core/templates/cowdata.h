@@ -38,12 +38,12 @@
 #include <string.h>
 #include <type_traits>
 
-template <class T>
+template <typename T>
 class Vector;
 class String;
 class Char16String;
 class CharString;
-template <class T, class V>
+template <typename T, typename V>
 class VMap;
 
 static_assert(std::is_trivially_destructible_v<std::atomic<uint64_t>>);
@@ -54,14 +54,14 @@ static_assert(std::is_trivially_destructible_v<std::atomic<uint64_t>>);
 #pragma GCC diagnostic ignored "-Wplacement-new"
 #endif
 
-template <class T>
+template <typename T>
 class CowData {
-	template <class TV>
+	template <typename TV>
 	friend class Vector;
 	friend class String;
 	friend class Char16String;
 	friend class CharString;
-	template <class TV, class VV>
+	template <typename TV, typename VV>
 	friend class VMap;
 
 public:
@@ -160,7 +160,7 @@ private:
 		return *out;
 	}
 
-	void _unref(void *p_data);
+	void _unref();
 	void _ref(const CowData *p_from);
 	void _ref(const CowData &p_from);
 	USize _copy_on_write();
@@ -222,12 +222,15 @@ public:
 	}
 
 	Error insert(Size p_pos, const T &p_val) {
-		ERR_FAIL_INDEX_V(p_pos, size() + 1, ERR_INVALID_PARAMETER);
-		resize(size() + 1);
-		for (Size i = (size() - 1); i > p_pos; i--) {
-			set(i, get(i - 1));
+		Size new_size = size() + 1;
+		ERR_FAIL_INDEX_V(p_pos, new_size, ERR_INVALID_PARAMETER);
+		Error err = resize(new_size);
+		ERR_FAIL_COND_V(err, err);
+		T *p = ptrw();
+		for (Size i = new_size - 1; i > p_pos; i--) {
+			p[i] = p[i - 1];
 		}
-		set(p_pos, p_val);
+		p[p_pos] = p_val;
 
 		return OK;
 	}
@@ -241,34 +244,33 @@ public:
 	_FORCE_INLINE_ CowData(CowData<T> &p_from) { _ref(p_from); };
 };
 
-template <class T>
-void CowData<T>::_unref(void *p_data) {
-	if (!p_data) {
+template <typename T>
+void CowData<T>::_unref() {
+	if (!_ptr) {
 		return;
 	}
 
 	SafeNumeric<USize> *refc = _get_refcount();
-
 	if (refc->decrement() > 0) {
 		return; // still in use
 	}
 	// clean up
 
 	if constexpr (!std::is_trivially_destructible_v<T>) {
-		USize *count = _get_size();
-		T *data = (T *)(count + 1);
+		USize current_size = *_get_size();
 
-		for (USize i = 0; i < *count; ++i) {
+		for (USize i = 0; i < current_size; ++i) {
 			// call destructors
-			data[i].~T();
+			T *t = &_ptr[i];
+			t->~T();
 		}
 	}
 
 	// free mem
-	Memory::free_static(((uint8_t *)p_data) - DATA_OFFSET, false);
+	Memory::free_static(((uint8_t *)_ptr) - DATA_OFFSET, false);
 }
 
-template <class T>
+template <typename T>
 typename CowData<T>::USize CowData<T>::_copy_on_write() {
 	if (!_ptr) {
 		return 0;
@@ -300,7 +302,7 @@ typename CowData<T>::USize CowData<T>::_copy_on_write() {
 			}
 		}
 
-		_unref(_ptr);
+		_unref();
 		_ptr = _data_ptr;
 
 		rc = 1;
@@ -308,7 +310,7 @@ typename CowData<T>::USize CowData<T>::_copy_on_write() {
 	return rc;
 }
 
-template <class T>
+template <typename T>
 template <bool p_ensure_zero>
 Error CowData<T>::resize(Size p_size) {
 	ERR_FAIL_COND_V(p_size < 0, ERR_INVALID_PARAMETER);
@@ -321,7 +323,7 @@ Error CowData<T>::resize(Size p_size) {
 
 	if (p_size == 0) {
 		// wants to clean up
-		_unref(_ptr);
+		_unref();
 		_ptr = nullptr;
 		return OK;
 	}
@@ -401,7 +403,7 @@ Error CowData<T>::resize(Size p_size) {
 	return OK;
 }
 
-template <class T>
+template <typename T>
 typename CowData<T>::Size CowData<T>::find(const T &p_val, Size p_from) const {
 	Size ret = -1;
 
@@ -419,7 +421,7 @@ typename CowData<T>::Size CowData<T>::find(const T &p_val, Size p_from) const {
 	return ret;
 }
 
-template <class T>
+template <typename T>
 typename CowData<T>::Size CowData<T>::rfind(const T &p_val, Size p_from) const {
 	const Size s = size();
 
@@ -438,7 +440,7 @@ typename CowData<T>::Size CowData<T>::rfind(const T &p_val, Size p_from) const {
 	return -1;
 }
 
-template <class T>
+template <typename T>
 typename CowData<T>::Size CowData<T>::count(const T &p_val) const {
 	Size amount = 0;
 	for (Size i = 0; i < size(); i++) {
@@ -449,18 +451,18 @@ typename CowData<T>::Size CowData<T>::count(const T &p_val) const {
 	return amount;
 }
 
-template <class T>
+template <typename T>
 void CowData<T>::_ref(const CowData *p_from) {
 	_ref(*p_from);
 }
 
-template <class T>
+template <typename T>
 void CowData<T>::_ref(const CowData &p_from) {
 	if (_ptr == p_from._ptr) {
 		return; // self assign, do nothing.
 	}
 
-	_unref(_ptr);
+	_unref();
 	_ptr = nullptr;
 
 	if (!p_from._ptr) {
@@ -472,9 +474,9 @@ void CowData<T>::_ref(const CowData &p_from) {
 	}
 }
 
-template <class T>
+template <typename T>
 CowData<T>::~CowData() {
-	_unref(_ptr);
+	_unref();
 }
 
 #if defined(__GNUC__) && !defined(__clang__)

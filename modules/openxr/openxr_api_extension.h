@@ -64,13 +64,20 @@ public:
 	uint64_t get_instance_proc_addr(String p_name);
 	String get_error_string(uint64_t result);
 	String get_swapchain_format_name(int64_t p_swapchain_format);
+	void set_object_name(int64_t p_object_type, uint64_t p_object_handle, const String &p_object_name);
+	void begin_debug_label_region(const String &p_label_name);
+	void end_debug_label_region();
+	void insert_debug_label(const String &p_label_name);
 
 	bool is_initialized();
 	bool is_running();
 
 	uint64_t get_play_space();
+	int64_t get_predicted_display_time();
 	int64_t get_next_frame_time();
 	bool can_render();
+
+	uint64_t get_hand_tracker(int p_hand_index);
 
 	void register_composition_layer_provider(OpenXRExtensionWrapperExtension *p_extension);
 	void unregister_composition_layer_provider(OpenXRExtensionWrapperExtension *p_extension);

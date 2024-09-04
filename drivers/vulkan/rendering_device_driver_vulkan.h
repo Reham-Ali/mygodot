@@ -87,6 +87,7 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 
 		Size2i min_texel_size;
 		Size2i max_texel_size;
+		Size2i max_fragment_size;
 
 		Size2i texel_size; // The texel size we'll use
 	};
@@ -110,11 +111,23 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 		PFN_vkAcquireNextImageKHR AcquireNextImageKHR = nullptr;
 		PFN_vkQueuePresentKHR QueuePresentKHR = nullptr;
 		PFN_vkCreateRenderPass2KHR CreateRenderPass2KHR = nullptr;
+
+		// Debug marker extensions.
+		PFN_vkCmdDebugMarkerBeginEXT CmdDebugMarkerBeginEXT = nullptr;
+		PFN_vkCmdDebugMarkerEndEXT CmdDebugMarkerEndEXT = nullptr;
+		PFN_vkCmdDebugMarkerInsertEXT CmdDebugMarkerInsertEXT = nullptr;
+		PFN_vkDebugMarkerSetObjectNameEXT DebugMarkerSetObjectNameEXT = nullptr;
+
+		// Debug device fault.
+		PFN_vkGetDeviceFaultInfoEXT GetDeviceFaultInfoEXT = nullptr;
 	};
+	// Debug marker extensions.
+	VkDebugReportObjectTypeEXT _convert_to_debug_report_objectType(VkObjectType p_object_type);
 
 	VkDevice vk_device = VK_NULL_HANDLE;
 	RenderingContextDriverVulkan *context_driver = nullptr;
 	RenderingContextDriver::Device context_device = {};
+	uint32_t frame_count = 1;
 	VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties physical_device_properties = {};
 	VkPhysicalDeviceFeatures physical_device_features = {};
@@ -130,6 +143,10 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 	ShaderCapabilities shader_capabilities;
 	StorageBufferCapabilities storage_buffer_capabilities;
 	bool pipeline_cache_control_support = false;
+	bool device_fault_support = false;
+#if defined(VK_TRACK_DEVICE_MEMORY)
+	bool device_memory_report_support = false;
+#endif
 	DeviceFunctions device_functions;
 
 	void _register_requested_device_extension(const CharString &p_extension_name, bool p_required);
@@ -158,10 +175,13 @@ private:
 
 	VmaPool _find_or_create_small_allocs_pool(uint32_t p_mem_type_index);
 
+private:
+	BufferID breadcrumb_buffer;
+
+public:
 	/*****************/
 	/**** BUFFERS ****/
 	/*****************/
-private:
 	struct BufferInfo {
 		VkBuffer vk_buffer = VK_NULL_HANDLE;
 		struct {
@@ -172,7 +192,6 @@ private:
 		VkBufferView vk_view = VK_NULL_HANDLE; // For texel buffers.
 	};
 
-public:
 	virtual BufferID buffer_create(uint64_t p_size, BitField<BufferUsageBits> p_usage, MemoryAllocationType p_allocation_type) override final;
 	virtual bool buffer_set_texel_format(BufferID p_buffer, DataFormat p_format) override final;
 	virtual void buffer_free(BufferID p_buffer) override final;
@@ -185,6 +204,7 @@ public:
 	/*****************/
 
 	struct TextureInfo {
+		VkImage vk_image = VK_NULL_HANDLE;
 		VkImageView vk_view = VK_NULL_HANDLE;
 		DataFormat rd_format = DATA_FORMAT_MAX;
 		VkImageCreateInfo vk_create_info = {};
@@ -208,6 +228,7 @@ public:
 	virtual uint8_t *texture_map(TextureID p_texture, const TextureSubresource &p_subresource) override final;
 	virtual void texture_unmap(TextureID p_texture) override final;
 	virtual BitField<TextureUsageBits> texture_get_usages_supported_by_format(DataFormat p_format, bool p_cpu_readable) override final;
+	virtual bool texture_can_make_shared_with_format(TextureID p_texture, DataFormat p_format, bool &r_raw_reinterpretation) override final;
 
 	/*****************/
 	/**** SAMPLER ****/
@@ -276,6 +297,7 @@ public:
 	// ----- QUEUE -----
 private:
 	struct CommandQueue {
+		LocalVector<VkSemaphore> present_semaphores;
 		LocalVector<VkSemaphore> image_semaphores;
 		LocalVector<SwapChain *> image_semaphores_swap_chains;
 		LocalVector<uint32_t> pending_semaphores_for_execute;
@@ -284,12 +306,12 @@ private:
 		LocalVector<Pair<Fence *, uint32_t>> image_semaphores_for_fences;
 		uint32_t queue_family = 0;
 		uint32_t queue_index = 0;
+		uint32_t present_semaphore_index = 0;
 	};
 
 public:
 	virtual CommandQueueID command_queue_create(CommandQueueFamilyID p_cmd_queue_family, bool p_identify_as_main_queue = false) override final;
-	virtual Error command_queue_execute(CommandQueueID p_cmd_queue, VectorView<CommandBufferID> p_cmd_buffers, VectorView<SemaphoreID> p_wait_semaphores, VectorView<SemaphoreID> p_signal_semaphores, FenceID p_signal_fence) override final;
-	virtual Error command_queue_present(CommandQueueID p_cmd_queue, VectorView<SwapChainID> p_swap_chains, VectorView<SemaphoreID> p_wait_semaphores) override final;
+	virtual Error command_queue_execute_and_present(CommandQueueID p_cmd_queue, VectorView<SemaphoreID> p_wait_semaphores, VectorView<CommandBufferID> p_cmd_buffers, VectorView<SemaphoreID> p_cmd_semaphores, FenceID p_cmd_fence, VectorView<SwapChainID> p_swap_chains) override final;
 	virtual void command_queue_free(CommandQueueID p_cmd_queue) override final;
 
 private:
@@ -401,6 +423,7 @@ public:
 	virtual ShaderID shader_create_from_bytecode(const Vector<uint8_t> &p_shader_binary, ShaderDescription &r_shader_desc, String &r_name) override final;
 	virtual void shader_free(ShaderID p_shader) override final;
 
+	virtual void shader_destroy_modules(ShaderID p_shader) override final;
 	/*********************/
 	/**** UNIFORM SET ****/
 	/*********************/
@@ -491,6 +514,7 @@ private:
 	static int caching_instance_count;
 	PipelineCache pipelines_cache;
 	String pipeline_cache_id;
+	HashMap<uint64_t, bool> has_comp_alpha;
 
 public:
 	virtual void pipeline_free(PipelineID p_pipeline) override final;
@@ -601,6 +625,13 @@ public:
 	virtual void command_begin_label(CommandBufferID p_cmd_buffer, const char *p_label_name, const Color &p_color) override final;
 	virtual void command_end_label(CommandBufferID p_cmd_buffer) override final;
 
+	/****************/
+	/**** DEBUG *****/
+	/****************/
+	virtual void command_insert_breadcrumb(CommandBufferID p_cmd_buffer, uint32_t p_data) override final;
+	void print_lost_device_info();
+	void on_device_lost() const;
+
 	/********************/
 	/**** SUBMISSION ****/
 	/********************/
@@ -615,6 +646,7 @@ public:
 	virtual void set_object_name(ObjectType p_type, ID p_driver_id, const String &p_name) override final;
 	virtual uint64_t get_resource_native_handle(DriverResource p_type, ID p_driver_id) override final;
 	virtual uint64_t get_total_memory_used() override final;
+
 	virtual uint64_t limit_get(Limit p_limit) override final;
 	virtual uint64_t api_trait_get(ApiTrait p_trait) override final;
 	virtual bool has_feature(Features p_feature) override final;
@@ -623,6 +655,8 @@ public:
 	virtual String get_api_version() const override final;
 	virtual String get_pipeline_cache_uuid() const override final;
 	virtual const Capabilities &get_capabilities() const override final;
+
+	virtual bool is_composite_alpha_supported(CommandQueueID p_queue) const override final;
 
 private:
 	/*********************/
@@ -643,5 +677,7 @@ public:
 	RenderingDeviceDriverVulkan(RenderingContextDriverVulkan *p_context_driver);
 	virtual ~RenderingDeviceDriverVulkan();
 };
+
+using VKC = RenderingContextDriverVulkan;
 
 #endif // RENDERING_DEVICE_DRIVER_VULKAN_H

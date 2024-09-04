@@ -82,17 +82,21 @@ Ref<GDScriptEditorTranslationParserPlugin> gdscript_translation_parser_plugin;
 class EditorExportGDScript : public EditorExportPlugin {
 	GDCLASS(EditorExportGDScript, EditorExportPlugin);
 
-public:
-	virtual void _export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) override {
-		int script_mode = EditorExportPreset::MODE_SCRIPT_BINARY_TOKENS_COMPRESSED;
+	static constexpr int DEFAULT_SCRIPT_MODE = EditorExportPreset::MODE_SCRIPT_BINARY_TOKENS_COMPRESSED;
+	int script_mode = DEFAULT_SCRIPT_MODE;
+
+protected:
+	virtual void _export_begin(const HashSet<String> &p_features, bool p_debug, const String &p_path, int p_flags) override {
+		script_mode = DEFAULT_SCRIPT_MODE;
 
 		const Ref<EditorExportPreset> &preset = get_export_preset();
-
 		if (preset.is_valid()) {
 			script_mode = preset->get_script_export_mode();
 		}
+	}
 
-		if (!p_path.ends_with(".gd") || script_mode == EditorExportPreset::MODE_SCRIPT_TEXT) {
+	virtual void _export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) override {
+		if (p_path.get_extension() != "gd" || script_mode == EditorExportPreset::MODE_SCRIPT_TEXT) {
 			return;
 		}
 
@@ -110,10 +114,9 @@ public:
 		}
 
 		add_file(p_path.get_basename() + ".gdc", file, true);
-
-		return;
 	}
 
+public:
 	virtual String get_name() const override { return "GDScript"; }
 };
 
@@ -162,6 +165,13 @@ void initialize_gdscript_module(ModuleInitializationLevel p_level) {
 
 		gdscript_translation_parser_plugin.instantiate();
 		EditorTranslationParser::get_singleton()->add_parser(gdscript_translation_parser_plugin, EditorTranslationParser::STANDARD);
+	} else if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
+		ClassDB::APIType prev_api = ClassDB::get_current_api();
+		ClassDB::set_current_api(ClassDB::API_EDITOR);
+
+		GDREGISTER_CLASS(GDScriptSyntaxHighlighter);
+
+		ClassDB::set_current_api(prev_api);
 	}
 #endif // TOOLS_ENABLED
 }

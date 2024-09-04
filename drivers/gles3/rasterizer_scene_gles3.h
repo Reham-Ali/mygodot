@@ -37,7 +37,7 @@
 #include "core/templates/paged_allocator.h"
 #include "core/templates/rid_owner.h"
 #include "core/templates/self_list.h"
-#include "drivers/gles3/shaders/cubemap_filter.glsl.gen.h"
+#include "drivers/gles3/shaders/effects/cubemap_filter.glsl.gen.h"
 #include "drivers/gles3/shaders/sky.glsl.gen.h"
 #include "scene/resources/mesh.h"
 #include "servers/rendering/renderer_compositor.h"
@@ -70,21 +70,28 @@ enum SceneUniformLocation {
 	SCENE_GLOBALS_UNIFORM_LOCATION,
 	SCENE_DATA_UNIFORM_LOCATION,
 	SCENE_MATERIAL_UNIFORM_LOCATION,
-	SCENE_EMPTY, // Unused, put here to avoid conflicts with SKY_DIRECTIONAL_LIGHT_UNIFORM_LOCATION.
+	SCENE_EMPTY1, // Unused, put here to avoid conflicts with SKY_DIRECTIONAL_LIGHT_UNIFORM_LOCATION.
 	SCENE_OMNILIGHT_UNIFORM_LOCATION,
 	SCENE_SPOTLIGHT_UNIFORM_LOCATION,
 	SCENE_DIRECTIONAL_LIGHT_UNIFORM_LOCATION,
 	SCENE_MULTIVIEW_UNIFORM_LOCATION,
 	SCENE_POSITIONAL_SHADOW_UNIFORM_LOCATION,
 	SCENE_DIRECTIONAL_SHADOW_UNIFORM_LOCATION,
+	SCENE_EMPTY2, // Unused, put here to avoid conflicts with SKY_MULTIVIEW_UNIFORM_LOCATION.
 };
 
 enum SkyUniformLocation {
 	SKY_TONEMAP_UNIFORM_LOCATION,
 	SKY_GLOBALS_UNIFORM_LOCATION,
-	SKY_EMPTY, // Unused, put here to avoid conflicts with SCENE_DATA_UNIFORM_LOCATION.
+	SKY_EMPTY1, // Unused, put here to avoid conflicts with SCENE_DATA_UNIFORM_LOCATION.
 	SKY_MATERIAL_UNIFORM_LOCATION,
 	SKY_DIRECTIONAL_LIGHT_UNIFORM_LOCATION,
+	SKY_EMPTY2, // Unused, put here to avoid conflicts with SCENE_OMNILIGHT_UNIFORM_LOCATION.
+	SKY_EMPTY3, // Unused, put here to avoid conflicts with SCENE_SPOTLIGHT_UNIFORM_LOCATION.
+	SKY_EMPTY4, // Unused, put here to avoid conflicts with SCENE_DIRECTIONAL_LIGHT_UNIFORM_LOCATION.
+	SKY_EMPTY5, // Unused, put here to avoid conflicts with SCENE_MULTIVIEW_UNIFORM_LOCATION.
+	SKY_EMPTY6, // Unused, put here to avoid conflicts with SCENE_POSITIONAL_SHADOW_UNIFORM_LOCATION.
+	SKY_EMPTY7, // Unused, put here to avoid conflicts with SCENE_DIRECTIONAL_SHADOW_UNIFORM_LOCATION.
 	SKY_MULTIVIEW_UNIFORM_LOCATION,
 };
 
@@ -127,6 +134,8 @@ struct RenderDataGLES3 {
 	uint32_t spot_light_count = 0;
 	uint32_t omni_light_count = 0;
 
+	float luminance_multiplier = 1.0;
+
 	RenderingMethod::RenderInfo *render_info = nullptr;
 
 	/* Shadow data */
@@ -142,7 +151,7 @@ private:
 	RS::ViewportDebugDraw debug_draw = RS::VIEWPORT_DEBUG_DRAW_DISABLED;
 	uint64_t scene_pass = 0;
 
-	template <class T>
+	template <typename T>
 	struct InstanceSort {
 		float depth;
 		T *instance = nullptr;
@@ -155,7 +164,6 @@ private:
 		RID shader_default_version;
 		RID default_material;
 		RID default_shader;
-		RID cubemap_filter_shader_version;
 		RID overdraw_material;
 		RID overdraw_shader;
 	} scene_globals;
@@ -312,6 +320,10 @@ private:
 		LocalVector<uint32_t> omni_light_gl_cache;
 		LocalVector<uint32_t> spot_light_gl_cache;
 
+		LocalVector<RID> paired_reflection_probes;
+		LocalVector<RID> reflection_probe_rid_cache;
+		LocalVector<Transform3D> reflection_probes_local_transform_cache;
+
 		RID lightmap_instance;
 		Rect2 lightmap_uv_scale;
 		uint32_t lightmap_slice_index;
@@ -329,7 +341,7 @@ private:
 		virtual void set_lightmap_capture(const Color *p_sh9) override;
 
 		virtual void pair_light_instances(const RID *p_light_instances, uint32_t p_light_instance_count) override;
-		virtual void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) override {}
+		virtual void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) override;
 		virtual void pair_decal_instances(const RID *p_decal_instances, uint32_t p_decal_instance_count) override {}
 		virtual void pair_voxel_gi_instances(const RID *p_voxel_gi_instances, uint32_t p_voxel_gi_instance_count) override {}
 
@@ -398,19 +410,25 @@ private:
 			float IBL_exposure_normalization;
 
 			uint32_t fog_enabled;
+			uint32_t fog_mode;
 			float fog_density;
 			float fog_height;
+
 			float fog_height_density;
+			float fog_depth_curve;
+			float fog_sun_scatter;
+			float fog_depth_begin;
 
 			float fog_light_color[3];
-			float fog_sun_scatter;
+			float fog_depth_end;
 
 			float shadow_bias;
-			float pad;
+			float luminance_multiplier;
 			uint32_t camera_visible_layers;
 			bool pancake_shadows;
 		};
 		static_assert(sizeof(UBO) % 16 == 0, "Scene UBO size must be a multiple of 16 bytes");
+		static_assert(sizeof(UBO) < 16384, "Scene UBO size must be 16384 bytes or smaller");
 
 		struct MultiviewUBO {
 			float projection_matrix_view[RendererSceneRender::MAX_RENDER_VIEWS][16];
@@ -418,12 +436,18 @@ private:
 			float eye_offset[RendererSceneRender::MAX_RENDER_VIEWS][4];
 		};
 		static_assert(sizeof(MultiviewUBO) % 16 == 0, "Multiview UBO size must be a multiple of 16 bytes");
+		static_assert(sizeof(MultiviewUBO) < 16384, "MultiviewUBO size must be 16384 bytes or smaller");
 
 		struct TonemapUBO {
 			float exposure = 1.0;
 			float white = 1.0;
 			int32_t tonemapper = 0;
 			int32_t pad = 0;
+
+			int32_t pad2 = 0;
+			float brightness = 1.0;
+			float contrast = 1.0;
+			float saturation = 1.0;
 		};
 		static_assert(sizeof(TonemapUBO) % 16 == 0, "Tonemap UBO size must be a multiple of 16 bytes");
 
@@ -436,9 +460,84 @@ private:
 		bool used_depth_prepass = false;
 
 		GLES3::SceneShaderData::BlendMode current_blend_mode = GLES3::SceneShaderData::BLEND_MODE_MIX;
-		GLES3::SceneShaderData::DepthDraw current_depth_draw = GLES3::SceneShaderData::DEPTH_DRAW_OPAQUE;
-		GLES3::SceneShaderData::DepthTest current_depth_test = GLES3::SceneShaderData::DEPTH_TEST_DISABLED;
 		GLES3::SceneShaderData::Cull cull_mode = GLES3::SceneShaderData::CULL_BACK;
+
+		bool current_blend_enabled = false;
+		bool current_depth_draw_enabled = false;
+		bool current_depth_test_enabled = false;
+		bool current_scissor_test_enabled = false;
+
+		void reset_gl_state() {
+			glDisable(GL_BLEND);
+			current_blend_enabled = false;
+
+			glDisable(GL_SCISSOR_TEST);
+			current_scissor_test_enabled = false;
+
+			glCullFace(GL_BACK);
+			glEnable(GL_CULL_FACE);
+			cull_mode = GLES3::SceneShaderData::CULL_BACK;
+
+			glDepthMask(GL_FALSE);
+			current_depth_draw_enabled = false;
+			glDisable(GL_DEPTH_TEST);
+			current_depth_test_enabled = false;
+		}
+
+		void set_gl_cull_mode(GLES3::SceneShaderData::Cull p_mode) {
+			if (cull_mode != p_mode) {
+				if (p_mode == GLES3::SceneShaderData::CULL_DISABLED) {
+					glDisable(GL_CULL_FACE);
+				} else {
+					if (cull_mode == GLES3::SceneShaderData::CULL_DISABLED) {
+						// Last time was disabled, so enable and set proper face.
+						glEnable(GL_CULL_FACE);
+					}
+					glCullFace(p_mode == GLES3::SceneShaderData::CULL_FRONT ? GL_FRONT : GL_BACK);
+				}
+				cull_mode = p_mode;
+			}
+		}
+
+		void enable_gl_blend(bool p_enabled) {
+			if (current_blend_enabled != p_enabled) {
+				if (p_enabled) {
+					glEnable(GL_BLEND);
+				} else {
+					glDisable(GL_BLEND);
+				}
+				current_blend_enabled = p_enabled;
+			}
+		}
+
+		void enable_gl_scissor_test(bool p_enabled) {
+			if (current_scissor_test_enabled != p_enabled) {
+				if (p_enabled) {
+					glEnable(GL_SCISSOR_TEST);
+				} else {
+					glDisable(GL_SCISSOR_TEST);
+				}
+				current_scissor_test_enabled = p_enabled;
+			}
+		}
+
+		void enable_gl_depth_draw(bool p_enabled) {
+			if (current_depth_draw_enabled != p_enabled) {
+				glDepthMask(p_enabled ? GL_TRUE : GL_FALSE);
+				current_depth_draw_enabled = p_enabled;
+			}
+		}
+
+		void enable_gl_depth_test(bool p_enabled) {
+			if (current_depth_test_enabled != p_enabled) {
+				if (p_enabled) {
+					glEnable(GL_DEPTH_TEST);
+				} else {
+					glDisable(GL_DEPTH_TEST);
+				}
+				current_depth_test_enabled = p_enabled;
+			}
+		}
 
 		bool texscreen_copied = false;
 		bool used_screen_texture = false;
@@ -543,7 +642,7 @@ private:
 	void _setup_environment(const RenderDataGLES3 *p_render_data, bool p_no_fog, const Size2i &p_screen_size, bool p_flip_y, const Color &p_default_bg_color, bool p_pancake_shadows, float p_shadow_bias = 0.0);
 	void _fill_render_list(RenderListType p_render_list, const RenderDataGLES3 *p_render_data, PassMode p_pass_mode, bool p_append = false);
 	void _render_shadows(const RenderDataGLES3 *p_render_data, const Size2i &p_viewport_size = Size2i(1, 1));
-	void _render_shadow_pass(RID p_light, RID p_shadow_atlas, int p_pass, const PagedArray<RenderGeometryInstance *> &p_instances, const Plane &p_camera_plane = Plane(), float p_lod_distance_multiplier = 0, float p_screen_mesh_lod_threshold = 0.0, RenderingMethod::RenderInfo *p_render_info = nullptr, const Size2i &p_viewport_size = Size2i(1, 1), const Transform3D &p_main_cam_transform = Transform3D());
+	void _render_shadow_pass(RID p_light, RID p_shadow_atlas, int p_pass, const PagedArray<RenderGeometryInstance *> &p_instances, float p_lod_distance_multiplier = 0, float p_screen_mesh_lod_threshold = 0.0, RenderingMethod::RenderInfo *p_render_info = nullptr, const Size2i &p_viewport_size = Size2i(1, 1), const Transform3D &p_main_cam_transform = Transform3D());
 	void _render_post_processing(const RenderDataGLES3 *p_render_data);
 
 	template <PassMode p_pass_mode>
@@ -581,6 +680,8 @@ protected:
 	bool glow_bicubic_upscale = false;
 	RS::EnvironmentSSRRoughnessQuality ssr_roughness_quality = RS::ENV_SSR_ROUGHNESS_QUALITY_LOW;
 
+	bool lightmap_bicubic_upscale = false;
+
 	/* Sky */
 
 	struct SkyGlobals {
@@ -604,10 +705,8 @@ protected:
 		RID fog_shader;
 		GLuint screen_triangle = 0;
 		GLuint screen_triangle_array = 0;
-		GLuint radical_inverse_vdc_cache_tex = 0;
 		uint32_t max_directional_lights = 4;
 		uint32_t roughness_layers = 8;
-		uint32_t ggx_samples = 128;
 	} sky_globals;
 
 	struct Sky {
@@ -650,9 +749,8 @@ protected:
 	void _setup_sky(const RenderDataGLES3 *p_render_data, const PagedArray<RID> &p_lights, const Projection &p_projection, const Transform3D &p_transform, const Size2i p_screen_size);
 	void _invalidate_sky(Sky *p_sky);
 	void _update_dirty_skys();
-	void _update_sky_radiance(RID p_env, const Projection &p_projection, const Transform3D &p_transform, float p_luminance_multiplier);
-	void _filter_sky_radiance(Sky *p_sky, int p_base_layer);
-	void _draw_sky(RID p_env, const Projection &p_projection, const Transform3D &p_transform, float p_luminance_multiplier, bool p_use_multiview, bool p_flip_y);
+	void _update_sky_radiance(RID p_env, const Projection &p_projection, const Transform3D &p_transform, float p_sky_energy_multiplier);
+	void _draw_sky(RID p_env, const Projection &p_projection, const Transform3D &p_transform, float p_sky_energy_multiplier, float p_luminance_multiplier, bool p_use_multiview, bool p_flip_y, bool p_apply_color_adjustments_in_post);
 	void _free_sky_data(Sky *p_sky);
 
 	// Needed for a single argument calls (material and uv2).
@@ -731,7 +829,7 @@ public:
 
 	void voxel_gi_set_quality(RS::VoxelGIQuality) override;
 
-	void render_scene(const Ref<RenderSceneBuffers> &p_render_buffers, const CameraData *p_camera_data, const CameraData *p_prev_camera_data, const PagedArray<RenderGeometryInstance *> &p_instances, const PagedArray<RID> &p_lights, const PagedArray<RID> &p_reflection_probes, const PagedArray<RID> &p_voxel_gi_instances, const PagedArray<RID> &p_decals, const PagedArray<RID> &p_lightmaps, const PagedArray<RID> &p_fog_volumes, RID p_environment, RID p_camera_attributes, RID p_shadow_atlas, RID p_occluder_debug_tex, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass, float p_screen_mesh_lod_threshold, const RenderShadowData *p_render_shadows, int p_render_shadow_count, const RenderSDFGIData *p_render_sdfgi_regions, int p_render_sdfgi_region_count, const RenderSDFGIUpdateData *p_sdfgi_update_data = nullptr, RenderingMethod::RenderInfo *r_render_info = nullptr) override;
+	void render_scene(const Ref<RenderSceneBuffers> &p_render_buffers, const CameraData *p_camera_data, const CameraData *p_prev_camera_data, const PagedArray<RenderGeometryInstance *> &p_instances, const PagedArray<RID> &p_lights, const PagedArray<RID> &p_reflection_probes, const PagedArray<RID> &p_voxel_gi_instances, const PagedArray<RID> &p_decals, const PagedArray<RID> &p_lightmaps, const PagedArray<RID> &p_fog_volumes, RID p_environment, RID p_camera_attributes, RID p_compositor, RID p_shadow_atlas, RID p_occluder_debug_tex, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass, float p_screen_mesh_lod_threshold, const RenderShadowData *p_render_shadows, int p_render_shadow_count, const RenderSDFGIData *p_render_sdfgi_regions, int p_render_sdfgi_region_count, const RenderSDFGIUpdateData *p_sdfgi_update_data = nullptr, RenderingMethod::RenderInfo *r_render_info = nullptr) override;
 	void render_material(const Transform3D &p_cam_transform, const Projection &p_cam_projection, bool p_cam_orthogonal, const PagedArray<RenderGeometryInstance *> &p_instances, RID p_framebuffer, const Rect2i &p_region) override;
 	void render_particle_collider_heightfield(RID p_collider, const Transform3D &p_transform, const PagedArray<RenderGeometryInstance *> &p_instances) override;
 
@@ -767,6 +865,7 @@ public:
 
 	void decals_set_filter(RS::DecalFilter p_filter) override;
 	void light_projectors_set_filter(RS::LightProjectorFilter p_filter) override;
+	virtual void lightmaps_set_bicubic_filter(bool p_enable) override;
 
 	RasterizerSceneGLES3();
 	~RasterizerSceneGLES3();

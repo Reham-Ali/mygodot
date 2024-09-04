@@ -30,7 +30,7 @@
 
 #include "soft_body_3d.h"
 
-#include "scene/3d/physics_body_3d.h"
+#include "scene/3d/physics/physics_body_3d.h"
 
 SoftBodyRenderingServerHandler::SoftBodyRenderingServerHandler() {}
 
@@ -82,7 +82,10 @@ void SoftBodyRenderingServerHandler::commit_changes() {
 }
 
 void SoftBodyRenderingServerHandler::set_vertex(int p_vertex_id, const Vector3 &p_vertex) {
-	memcpy(&write_buffer[p_vertex_id * stride + offset_vertices], &p_vertex, sizeof(Vector3));
+	float *vertex_buffer = reinterpret_cast<float *>(write_buffer + p_vertex_id * stride + offset_vertices);
+	*vertex_buffer++ = (float)p_vertex.x;
+	*vertex_buffer++ = (float)p_vertex.y;
+	*vertex_buffer++ = (float)p_vertex.z;
 }
 
 void SoftBodyRenderingServerHandler::set_normal(int p_vertex_id, const Vector3 &p_normal) {
@@ -215,7 +218,13 @@ bool SoftBody3D::_set_property_pinned_points_attachment(int p_item, const String
 
 	if ("spatial_attachment_path" == p_what) {
 		PinnedPoint *w = pinned_points.ptrw();
-		callable_mp(this, &SoftBody3D::_pin_point_deferred).call_deferred(Variant(w[p_item].point_index), true, p_value);
+
+		if (is_inside_tree()) {
+			callable_mp(this, &SoftBody3D::_pin_point_deferred).call_deferred(Variant(w[p_item].point_index), true, p_value);
+		} else {
+			pin_point(w[p_item].point_index, true, p_value);
+			_make_cache_dirty();
+		}
 	} else if ("offset" == p_what) {
 		PinnedPoint *w = pinned_points.ptrw();
 		w[p_item].offset = p_value;
@@ -373,8 +382,8 @@ void SoftBody3D::_bind_methods() {
 	BIND_ENUM_CONSTANT(DISABLE_MODE_KEEP_ACTIVE);
 }
 
-Array SoftBody3D::get_configuration_warnings() const {
-	Array warnings = Node::get_configuration_warnings();
+PackedStringArray SoftBody3D::get_configuration_warnings() const {
+	PackedStringArray warnings = Node::get_configuration_warnings();
 
 	if (mesh.is_null()) {
 		warnings.push_back(RTR("This body will be ignored until you set a mesh."));

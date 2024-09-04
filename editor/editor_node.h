@@ -31,10 +31,11 @@
 #ifndef EDITOR_NODE_H
 #define EDITOR_NODE_H
 
+#include "core/object/script_language.h"
 #include "core/templates/safe_refcount.h"
 #include "editor/editor_data.h"
 #include "editor/editor_folding.h"
-#include "editor/editor_plugin.h"
+#include "editor/plugins/editor_plugin.h"
 
 typedef void (*EditorNodeInitCallback)();
 typedef void (*EditorPluginInitializeCallback)();
@@ -77,9 +78,11 @@ class DockSplitContainer;
 class DynamicFontImportSettingsDialog;
 class EditorAbout;
 class EditorBuildProfileManager;
+class EditorBottomPanel;
 class EditorCommandPalette;
 class EditorDockManager;
 class EditorExport;
+class EditorExportPreset;
 class EditorExtensionManager;
 class EditorFeatureProfileManager;
 class EditorFileDialog;
@@ -119,6 +122,14 @@ class SurfaceUpgradeTool;
 class SurfaceUpgradeDialog;
 class WindowWrapper;
 
+struct EditorProgress {
+	String task;
+	bool step(const String &p_state, int p_step = -1, bool p_force_refresh = true);
+
+	EditorProgress(const String &p_task, const String &p_label, int p_amount, bool p_can_cancel = false);
+	~EditorProgress();
+};
+
 class EditorNode : public Node {
 	GDCLASS(EditorNode, Node);
 
@@ -133,7 +144,19 @@ public:
 	enum SceneNameCasing {
 		SCENE_NAME_CASING_AUTO,
 		SCENE_NAME_CASING_PASCAL_CASE,
-		SCENE_NAME_CASING_SNAKE_CASE
+		SCENE_NAME_CASING_SNAKE_CASE,
+		SCENE_NAME_CASING_KEBAB_CASE,
+	};
+
+	enum ActionOnPlay {
+		ACTION_ON_PLAY_DO_NOTHING,
+		ACTION_ON_PLAY_OPEN_OUTPUT,
+		ACTION_ON_PLAY_OPEN_DEBUGGER,
+	};
+
+	enum ActionOnStop {
+		ACTION_ON_STOP_DO_NOTHING,
+		ACTION_ON_STOP_CLOSE_BUTTOM_PANEL,
 	};
 
 	struct ExecuteThreadArgs {
@@ -155,6 +178,7 @@ private:
 		FILE_NEW_INHERITED_SCENE,
 		FILE_OPEN_SCENE,
 		FILE_SAVE_SCENE,
+		FILE_SAVE_SCENE_SILENTLY,
 		FILE_SAVE_AS_SCENE,
 		FILE_SAVE_ALL_SCENES,
 		FILE_SAVE_AND_RUN,
@@ -222,7 +246,7 @@ private:
 		HELP_SEARCH,
 		HELP_COMMAND_PALETTE,
 		HELP_DOCS,
-		HELP_QA,
+		HELP_FORUM,
 		HELP_REPORT_A_BUG,
 		HELP_COPY_SYSTEM_INFO,
 		HELP_SUGGEST_A_FEATURE,
@@ -241,12 +265,6 @@ private:
 	enum {
 		MAX_INIT_CALLBACKS = 128,
 		MAX_BUILD_CALLBACKS = 128
-	};
-
-	struct BottomPanelItem {
-		String name;
-		Control *control = nullptr;
-		Button *button = nullptr;
 	};
 
 	struct ExportDefer {
@@ -323,7 +341,6 @@ private:
 	DisplayServer::WindowMode prev_mode = DisplayServer::WINDOW_MODE_MAXIMIZED;
 	int old_split_ofs = 0;
 	VSplitContainer *top_split = nullptr;
-	HBoxContainer *bottom_hb = nullptr;
 	Control *vp_base = nullptr;
 
 	Label *project_title = nullptr;
@@ -357,6 +374,13 @@ private:
 
 	Ref<Theme> theme;
 
+	Timer *system_theme_timer = nullptr;
+	bool follow_system_theme = false;
+	bool use_system_accent_color = false;
+	bool last_dark_mode_state = false;
+	Color last_system_base_color = Color(0, 0, 0, 0);
+	Color last_system_accent_color = Color(0, 0, 0, 0);
+
 	PopupMenu *recent_scenes = nullptr;
 	String _recent_scene;
 	List<String> previous_scenes;
@@ -382,6 +406,9 @@ private:
 	ConfirmationDialog *gradle_build_manage_templates = nullptr;
 	ConfirmationDialog *install_android_build_template = nullptr;
 	ConfirmationDialog *remove_android_build_template = nullptr;
+	Label *install_android_build_template_message = nullptr;
+	OptionButton *choose_android_export_profile = nullptr;
+	Ref<EditorExportPreset> android_export_preset;
 
 	PopupMenu *vcs_actions_menu = nullptr;
 	EditorFileDialog *file = nullptr;
@@ -392,8 +419,6 @@ private:
 	EditorFileDialog *file_export_lib = nullptr;
 	EditorFileDialog *file_script = nullptr;
 	EditorFileDialog *file_android_build_source = nullptr;
-	CheckBox *file_export_lib_merge = nullptr;
-	CheckBox *file_export_lib_apply_xforms = nullptr;
 	String current_path;
 	MenuButton *update_spinner = nullptr;
 
@@ -415,17 +440,10 @@ private:
 
 	EditorDockManager *editor_dock_manager = nullptr;
 	Timer *editor_layout_save_delay_timer = nullptr;
+	Timer *scan_changes_timer = nullptr;
 	Button *distraction_free = nullptr;
 
-	Vector<BottomPanelItem> bottom_panel_items;
-	PanelContainer *bottom_panel = nullptr;
-	HBoxContainer *bottom_panel_hb = nullptr;
-	HBoxContainer *bottom_panel_hb_editors = nullptr;
-	VBoxContainer *bottom_panel_vb = nullptr;
-	EditorToaster *editor_toaster = nullptr;
-	LinkButton *version_btn = nullptr;
-	Button *bottom_panel_raise = nullptr;
-	bool bottom_panel_updating = false;
+	EditorBottomPanel *bottom_panel = nullptr;
 
 	Tree *disk_changed_list = nullptr;
 	ConfirmationDialog *disk_changed = nullptr;
@@ -460,6 +478,7 @@ private:
 	String external_file;
 	String open_navigate;
 	String saving_scene;
+	EditorProgress *save_scene_progress = nullptr;
 
 	DynamicFontImportSettingsDialog *fontdata_import_settings = nullptr;
 	SceneImportSettingsDialog *scene_import_settings = nullptr;
@@ -479,6 +498,8 @@ private:
 	SurfaceUpgradeTool *surface_upgrade_tool = nullptr;
 	SurfaceUpgradeDialog *surface_upgrade_dialog = nullptr;
 	bool run_surface_upgrade_tool = false;
+
+	bool was_window_windowed_last = false;
 
 	static EditorBuildCallback build_callbacks[MAX_BUILD_CALLBACKS];
 	static EditorPluginInitializeCallback plugin_init_callbacks[MAX_INIT_CALLBACKS];
@@ -528,10 +549,13 @@ private:
 	void _menu_option_confirm(int p_option, bool p_confirmed);
 
 	void _android_build_source_selected(const String &p_file);
+	void _android_export_preset_selected(int p_index);
 
 	void _request_screenshot();
 	void _screenshot(bool p_use_utc = false);
 	void _save_screenshot(NodePath p_path);
+
+	void _check_system_theme_changed();
 
 	void _tool_menu_option(int p_idx);
 	void _export_as_menu_option(int p_idx);
@@ -543,6 +567,7 @@ private:
 	void _plugin_over_self_own(EditorPlugin *p_plugin);
 
 	void _fs_changed();
+	void _resources_reimporting(const Vector<String> &p_resources);
 	void _resources_reimported(const Vector<String> &p_resources);
 	void _sources_changed(bool p_exist);
 
@@ -557,11 +582,11 @@ private:
 	void _show_messages();
 	void _vp_resized();
 	void _titlebar_resized();
-	void _version_button_pressed();
+	void _viewport_resized();
 
 	void _update_undo_redo_allowed();
 
-	int _save_external_resources();
+	int _save_external_resources(bool p_also_save_external_data = false);
 
 	void _set_current_scene(int p_idx);
 	void _set_current_scene_nocheck(int p_idx);
@@ -571,6 +596,7 @@ private:
 	int _next_unsaved_scene(bool p_valid_filename, int p_start = 0);
 	void _discard_changes(const String &p_str = String());
 	void _scene_tab_closed(int p_tab);
+	void _cancel_close_scene_tab();
 
 	void _inherit_request(String p_file);
 	void _instantiate_request(const Vector<String> &p_files);
@@ -610,6 +636,7 @@ private:
 
 	void _find_node_types(Node *p_node, int &count_2d, int &count_3d);
 	void _save_scene_with_preview(String p_file, int p_idx = -1);
+	void _close_save_scene_progress();
 
 	bool _find_scene_in_use(Node *p_node, const String &p_path) const;
 
@@ -626,6 +653,8 @@ private:
 
 	void _save_central_editor_layout_to_config(Ref<ConfigFile> p_config_file);
 	void _load_central_editor_layout_from_config(Ref<ConfigFile> p_config_file);
+
+	void _save_window_settings_to_config(Ref<ConfigFile> p_layout, const String &p_section);
 
 	void _save_open_scenes_to_config(Ref<ConfigFile> p_layout);
 	void _load_open_scenes_from_config(Ref<ConfigFile> p_layout);
@@ -658,14 +687,11 @@ private:
 	void _immediate_dialog_confirmed();
 	void _select_default_main_screen_plugin();
 
-	void _bottom_panel_switch_by_control(bool p_enable, Control *p_control);
-	void _bottom_panel_switch(bool p_enable, int p_idx);
-	void _bottom_panel_raise_toggled(bool);
-	bool _bottom_panel_drag_hover(const Vector2 &, const Variant &, Button *p_button, Control *p_control);
-
 	void _begin_first_scan();
 
-	void _notify_scene_updated(Node *p_node);
+	void _notify_nodes_scene_reimported(Node *p_node, Array p_reimported_nodes);
+
+	void _remove_all_not_owned_children(Node *p_node, Node *p_owner);
 
 protected:
 	friend class FileSystemDock;
@@ -675,6 +701,7 @@ protected:
 
 public:
 	// Public for use with callable_mp.
+	void init_plugins();
 	void _on_plugin_ready(Object *p_script, const String &p_activate_name);
 
 	void editor_select(int p_which);
@@ -693,8 +720,10 @@ public:
 
 	static EditorTitleBar *get_title_bar() { return singleton->title_bar; }
 	static VSplitContainer *get_top_split() { return singleton->top_split; }
+	static EditorBottomPanel *get_bottom_panel() { return singleton->bottom_panel; }
 
-	static String adjust_scene_name_casing(const String &root_name);
+	static String adjust_scene_name_casing(const String &p_root_name);
+	static String adjust_script_name_casing(const String &p_file_name, ScriptLanguage::ScriptNameCasing p_auto_casing);
 
 	static bool has_unsaved_changes() { return singleton->unsaved_cache; }
 	static void disambiguate_filenames(const Vector<String> p_full_paths, Vector<String> &r_filenames);
@@ -754,6 +783,7 @@ public:
 
 	void push_item(Object *p_object, const String &p_property = "", bool p_inspector_only = false);
 	void push_item_no_inspector(Object *p_object);
+	void edit_previous_item();
 	void edit_item(Object *p_object, Object *p_editing_owner);
 	void push_node_item(Node *p_node);
 	void hide_unused_editors(const Object *p_editing_owner = nullptr);
@@ -773,6 +803,7 @@ public:
 	SubViewport *get_scene_root() { return scene_root; } // Root of the scene being edited.
 
 	void set_edited_scene(Node *p_scene);
+	void set_edited_scene_root(Node *p_scene, bool p_auto_add);
 	Node *get_edited_scene() { return editor_data.get_edited_scene_root(); }
 
 	void fix_dependencies(const String &p_for_file);
@@ -780,7 +811,8 @@ public:
 	Error load_scene(const String &p_scene, bool p_ignore_broken_deps = false, bool p_set_inherited = false, bool p_clear_errors = true, bool p_force_open_imported = false, bool p_silent_change_tab = false);
 	Error load_resource(const String &p_resource, bool p_ignore_broken_deps = false);
 
-	HashMap<StringName, Variant> get_modified_properties_for_node(Node *p_node);
+	HashMap<StringName, Variant> get_modified_properties_for_node(Node *p_node, bool p_node_references_only);
+	HashMap<StringName, Variant> get_modified_properties_reference_to_nodes(Node *p_node, List<Node *> &p_nodes_referenced_by);
 
 	struct AdditiveNodeEntry {
 		Node *node = nullptr;
@@ -790,8 +822,6 @@ public:
 		// Used if the original parent node is lost
 		Transform2D transform_2d;
 		Transform3D transform_3d;
-		// Used to keep track of the ownership of all ancestor nodes so they can be restored later.
-		HashMap<Node *, Node *> ownership_table;
 	};
 
 	struct ConnectionWithNodePath {
@@ -806,14 +836,40 @@ public:
 		List<Node::GroupInfo> groups;
 	};
 
-	void update_ownership_table_for_addition_node_ancestors(Node *p_current_node, HashMap<Node *, Node *> &p_ownership_table);
+	struct InstanceModificationsEntry {
+		Node *original_node;
+		String instance_path;
+		List<Node *> instance_list;
+		HashMap<NodePath, ModificationNodeEntry> modifications;
+		List<AdditiveNodeEntry> addition_list;
+	};
 
-	void update_diff_data_for_node(
+	struct SceneModificationsEntry {
+		List<InstanceModificationsEntry> instance_list;
+		HashMap<NodePath, ModificationNodeEntry> other_instances_modifications;
+	};
+
+	HashMap<int, SceneModificationsEntry> scenes_modification_table;
+	List<String> scenes_reimported;
+	List<String> resources_reimported;
+
+	void update_node_from_node_modification_entry(Node *p_node, ModificationNodeEntry &p_node_modification);
+
+	void get_preload_scene_modification_table(
 			Node *p_edited_scene,
+			Node *p_reimported_root,
+			Node *p_node, InstanceModificationsEntry &p_instance_modifications);
+
+	void get_preload_modifications_reference_to_nodes(
 			Node *p_root,
 			Node *p_node,
-			HashMap<NodePath, ModificationNodeEntry> &p_modification_table,
-			List<AdditiveNodeEntry> &p_addition_list);
+			List<Node *> &p_excluded_nodes,
+			List<Node *> &p_instance_list_with_children,
+			HashMap<NodePath, ModificationNodeEntry> &p_modification_table);
+	void get_children_nodes(Node *p_node, List<Node *> &p_nodes);
+	bool is_additional_node_in_scene(Node *p_edited_scene, Node *p_reimported_root, Node *p_node);
+
+	void replace_history_reimported_nodes(Node *p_original_root_node, Node *p_new_root_node, Node *p_node);
 
 	bool is_scene_open(const String &p_path);
 	bool is_multi_window_enabled() const;
@@ -869,18 +925,13 @@ public:
 	void reload_scene(const String &p_path);
 
 	void find_all_instances_inheriting_path_in_node(Node *p_root, Node *p_node, const String &p_instance_path, List<Node *> &p_instance_list);
-	void reload_instances_with_path_in_edited_scenes(const String &p_path);
+	void preload_reimporting_with_path_in_edited_scenes(const List<String> &p_scenes);
+	void reload_instances_with_path_in_edited_scenes();
 
 	bool is_exiting() const { return exiting; }
 
-	Button *add_bottom_panel_item(String p_text, Control *p_item, bool p_at_front = false);
-	void make_bottom_panel_item_visible(Control *p_item);
-	void raise_bottom_panel_item(Control *p_item);
-	void hide_bottom_panel();
-	void remove_bottom_panel_item(Control *p_item);
-
-	Variant drag_resource(const Ref<Resource> &p_res, Control *p_from);
-	Variant drag_files_and_dirs(const Vector<String> &p_paths, Control *p_from);
+	Dictionary drag_resource(const Ref<Resource> &p_res, Control *p_from);
+	Dictionary drag_files_and_dirs(const Vector<String> &p_paths, Control *p_from);
 
 	void add_tool_menu_item(const String &p_name, const Callable &p_callback);
 	void add_tool_submenu_item(const String &p_name, PopupMenu *p_submenu);
@@ -894,6 +945,7 @@ public:
 	void save_before_run();
 	void try_autosave();
 	void restart_editor();
+	void unload_editor_addons();
 
 	void dim_editor(bool p_dimming);
 	bool is_editor_dimmed() const;
@@ -901,6 +953,9 @@ public:
 	void edit_current() { _edit_current(); };
 
 	bool has_scenes_in_session();
+
+	void undo();
+	void redo();
 
 	int execute_and_show_output(const String &p_title, const String &p_path, const List<String> &p_arguments, bool p_close_on_ok = true, bool p_close_on_errors = false, String *r_output = nullptr);
 
@@ -912,16 +967,6 @@ public:
 	Vector<Ref<EditorResourceConversionPlugin>> find_resource_conversion_plugin(const Ref<Resource> &p_for_resource);
 
 	bool ensure_main_scene(bool p_from_native);
-};
-
-struct EditorProgress {
-	String task;
-	bool step(const String &p_state, int p_step = -1, bool p_force_refresh = true) { return EditorNode::progress_task_step(task, p_state, p_step, p_force_refresh); }
-	EditorProgress(const String &p_task, const String &p_label, int p_amount, bool p_can_cancel = false) {
-		EditorNode::progress_add_task(p_task, p_label, p_amount, p_can_cancel);
-		task = p_task;
-	}
-	~EditorProgress() { EditorNode::progress_end_task(task); }
 };
 
 class EditorPluginList : public Object {

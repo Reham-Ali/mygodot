@@ -39,11 +39,19 @@
 
 #include "extensions/openxr_extension_wrapper_extension.h"
 
+#include "scene/openxr_composition_layer.h"
+#include "scene/openxr_composition_layer_cylinder.h"
+#include "scene/openxr_composition_layer_equirect.h"
+#include "scene/openxr_composition_layer_quad.h"
 #include "scene/openxr_hand.h"
+#include "scene/openxr_visibility_mask.h"
 
 #include "extensions/openxr_composition_layer_depth_extension.h"
+#include "extensions/openxr_composition_layer_extension.h"
+#include "extensions/openxr_debug_utils_extension.h"
 #include "extensions/openxr_eye_gaze_interaction.h"
 #include "extensions/openxr_fb_display_refresh_rate_extension.h"
+#include "extensions/openxr_hand_interaction_extension.h"
 #include "extensions/openxr_hand_tracking_extension.h"
 #include "extensions/openxr_htc_controller_extension.h"
 #include "extensions/openxr_htc_vive_tracker_extension.h"
@@ -51,8 +59,10 @@
 #include "extensions/openxr_local_floor_extension.h"
 #include "extensions/openxr_meta_controller_extension.h"
 #include "extensions/openxr_ml2_controller_extension.h"
+#include "extensions/openxr_mxink_extension.h"
 #include "extensions/openxr_palm_pose_extension.h"
 #include "extensions/openxr_pico_controller_extension.h"
+#include "extensions/openxr_visibility_mask_extension.h"
 #include "extensions/openxr_wmr_controller_extension.h"
 
 #ifdef TOOLS_ENABLED
@@ -110,6 +120,7 @@ void initialize_openxr_module(ModuleInitializationLevel p_level) {
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRLocalFloorExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRPicoControllerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRCompositionLayerDepthExtension));
+			OpenXRAPI::register_extension_wrapper(memnew(OpenXRCompositionLayerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRHTCControllerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRHTCViveTrackerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRHuaweiControllerExtension));
@@ -117,10 +128,14 @@ void initialize_openxr_module(ModuleInitializationLevel p_level) {
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRWMRControllerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRML2ControllerExtension));
 			OpenXRAPI::register_extension_wrapper(memnew(OpenXRMetaControllerExtension));
+			OpenXRAPI::register_extension_wrapper(memnew(OpenXREyeGazeInteractionExtension));
+			OpenXRAPI::register_extension_wrapper(memnew(OpenXRHandInteractionExtension));
+			OpenXRAPI::register_extension_wrapper(memnew(OpenXRMxInkExtension));
+			OpenXRAPI::register_extension_wrapper(memnew(OpenXRVisibilityMaskExtension));
 
 			// register gated extensions
-			if (GLOBAL_GET("xr/openxr/extensions/eye_gaze_interaction") && (!OS::get_singleton()->has_feature("mobile") || OS::get_singleton()->has_feature(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME))) {
-				OpenXRAPI::register_extension_wrapper(memnew(OpenXREyeGazeInteractionExtension));
+			if (int(GLOBAL_GET("xr/openxr/extensions/debug_utils")) > 0) {
+				OpenXRAPI::register_extension_wrapper(memnew(OpenXRDebugUtilsExtension));
 			}
 			if (GLOBAL_GET("xr/openxr/extensions/hand_tracking")) {
 				OpenXRAPI::register_extension_wrapper(memnew(OpenXRHandTrackingExtension));
@@ -137,7 +152,9 @@ void initialize_openxr_module(ModuleInitializationLevel p_level) {
 				const char *init_error_message =
 						"OpenXR was requested but failed to start.\n"
 						"Please check if your HMD is connected.\n"
-						"When using Windows MR please note that WMR only has DirectX support, make sure SteamVR is your default OpenXR runtime.\n"
+#ifdef WINDOWS_ENABLED
+						"When using Windows Mixed Reality, note that WMR only has DirectX support. Make sure SteamVR is your default OpenXR runtime.\n"
+#endif
 						"Godot will start in normal mode.\n";
 
 				WARN_PRINT(init_error_message);
@@ -164,7 +181,14 @@ void initialize_openxr_module(ModuleInitializationLevel p_level) {
 		GDREGISTER_CLASS(OpenXRIPBinding);
 		GDREGISTER_CLASS(OpenXRInteractionProfile);
 
+		GDREGISTER_ABSTRACT_CLASS(OpenXRCompositionLayer);
+		GDREGISTER_CLASS(OpenXRCompositionLayerEquirect);
+		GDREGISTER_CLASS(OpenXRCompositionLayerCylinder);
+		GDREGISTER_CLASS(OpenXRCompositionLayerQuad);
+
 		GDREGISTER_CLASS(OpenXRHand);
+
+		GDREGISTER_CLASS(OpenXRVisibilityMask);
 
 		XRServer *xr_server = XRServer::get_singleton();
 		if (xr_server) {

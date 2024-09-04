@@ -169,7 +169,7 @@ struct Texture {
 		TYPE_3D
 	};
 
-	Type type;
+	Type type = TYPE_2D;
 	RS::TextureLayeredType layered_type = RS::TEXTURE_LAYERED_2D_ARRAY;
 
 	GLenum target = GL_TEXTURE_2D;
@@ -347,9 +347,11 @@ struct RenderTarget {
 	GLuint backbuffer = 0;
 	GLuint backbuffer_depth = 0;
 
+	bool hdr = false; // For Compatibility this effects both 2D and 3D rendering!
 	GLuint color_internal_format = GL_RGBA8;
 	GLuint color_format = GL_RGBA;
 	GLuint color_type = GL_UNSIGNED_BYTE;
+	uint32_t color_format_size = 4;
 	Image::Format image_format = Image::FORMAT_RGBA8;
 
 	GLuint sdf_texture_write = 0;
@@ -551,6 +553,7 @@ public:
 	void texture_set_data(RID p_texture, const Ref<Image> &p_image, int p_layer = 0);
 	virtual Image::Format texture_get_format(RID p_texture) const override;
 	uint32_t texture_get_texid(RID p_texture) const;
+	Vector3i texture_get_size(RID p_texture) const;
 	uint32_t texture_get_width(RID p_texture) const;
 	uint32_t texture_get_height(RID p_texture) const;
 	uint32_t texture_get_depth(RID p_texture) const;
@@ -631,13 +634,18 @@ public:
 	virtual void render_target_set_msaa_needs_resolve(RID p_render_target, bool p_needs_resolve) override {}
 	virtual bool render_target_get_msaa_needs_resolve(RID p_render_target) const override { return false; }
 	virtual void render_target_do_msaa_resolve(RID p_render_target) override {}
-	virtual void render_target_set_use_hdr(RID p_render_target, bool p_use_hdr_2d) override {}
-	virtual bool render_target_is_using_hdr(RID p_render_target) const override { return false; }
+	virtual void render_target_set_use_hdr(RID p_render_target, bool p_use_hdr_2d) override;
+	virtual bool render_target_is_using_hdr(RID p_render_target) const override;
 
 	// new
 	void render_target_set_as_unused(RID p_render_target) override {
 		render_target_clear_used(p_render_target);
 	}
+
+	GLuint render_target_get_color_internal_format(RID p_render_target) const;
+	GLuint render_target_get_color_format(RID p_render_target) const;
+	GLuint render_target_get_color_type(RID p_render_target) const;
+	uint32_t render_target_get_color_format_size(RID p_render_target) const;
 
 	void render_target_request_clear(RID p_render_target, const Color &p_clear_color) override;
 	bool render_target_is_clear_requested(RID p_render_target) override;
@@ -665,6 +673,8 @@ public:
 
 	virtual void render_target_set_vrs_mode(RID p_render_target, RS::ViewportVRSMode p_mode) override {}
 	virtual RS::ViewportVRSMode render_target_get_vrs_mode(RID p_render_target) const override { return RS::VIEWPORT_VRS_DISABLED; }
+	virtual void render_target_set_vrs_update_mode(RID p_render_target, RS::ViewportVRSUpdateMode p_mode) override {}
+	virtual RS::ViewportVRSUpdateMode render_target_get_vrs_update_mode(RID p_render_target) const override { return RS::VIEWPORT_VRS_UPDATE_DISABLED; }
 	virtual void render_target_set_vrs_texture(RID p_render_target, RID p_texture) override {}
 	virtual RID render_target_get_vrs_texture(RID p_render_target) const override { return RID(); }
 
