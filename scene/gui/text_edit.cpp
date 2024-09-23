@@ -8336,7 +8336,8 @@ void TextEdit::_insert_text(int p_line, int p_char, const String &p_text, int *r
 		_clear_redo();
 	}
 
-	int retline, retchar;
+	int retline = 0;
+	int retchar = 0;
 	_base_insert_text(p_line, p_char, p_text, retline, retchar);
 	if (r_end_line) {
 		*r_end_line = retline;
