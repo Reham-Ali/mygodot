@@ -1284,13 +1284,13 @@ void GridMapEditor::_bind_methods() {
 }
 
 GridMapEditor::GridMapEditor() {
-	ED_SHORTCUT("grid_map/previous_floor", TTR("Previous Floor"), Key::KEY_1, true);
-	ED_SHORTCUT("grid_map/next_floor", TTR("Next Floor"), Key::KEY_3, true);
-	ED_SHORTCUT("grid_map/edit_x_axis", TTR("Edit X Axis"), KeyModifierMask::SHIFT + Key::Z, true);
-	ED_SHORTCUT("grid_map/edit_y_axis", TTR("Edit Y Axis"), KeyModifierMask::SHIFT + Key::X, true);
-	ED_SHORTCUT("grid_map/edit_z_axis", TTR("Edit Z Axis"), KeyModifierMask::SHIFT + Key::C, true);
-	ED_SHORTCUT("grid_map/keep_selected", TTR("Keep Selection"));
-	ED_SHORTCUT("grid_map/clear_rotation", TTR("Clear Rotation"));
+	ED_SHORTCUT("grid_map/previous_floor", TTRC("Previous Floor"), Key::KEY_1, true);
+	ED_SHORTCUT("grid_map/next_floor", TTRC("Next Floor"), Key::KEY_3, true);
+	ED_SHORTCUT("grid_map/edit_x_axis", TTRC("Edit X Axis"), KeyModifierMask::SHIFT + Key::Z, true);
+	ED_SHORTCUT("grid_map/edit_y_axis", TTRC("Edit Y Axis"), KeyModifierMask::SHIFT + Key::X, true);
+	ED_SHORTCUT("grid_map/edit_z_axis", TTRC("Edit Z Axis"), KeyModifierMask::SHIFT + Key::C, true);
+	ED_SHORTCUT("grid_map/keep_selected", TTRC("Keep Selection"));
+	ED_SHORTCUT("grid_map/clear_rotation", TTRC("Clear Rotation"));
 
 	options = memnew(MenuButton);
 	options->set_theme_type_variation("FlatButton");
@@ -1335,7 +1335,7 @@ GridMapEditor::GridMapEditor() {
 	transform_mode_button->set_theme_type_variation("FlatButton");
 	transform_mode_button->set_toggle_mode(true);
 	transform_mode_button->set_button_group(mode_buttons_group);
-	transform_mode_button->set_shortcut(ED_SHORTCUT("grid_map/transform_tool", TTR("Transform"), Key::T, true));
+	transform_mode_button->set_shortcut(ED_SHORTCUT("grid_map/transform_tool", TTRC("Transform"), Key::T, true));
 	transform_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
 	mode_buttons->add_child(transform_mode_button);
@@ -1347,7 +1347,7 @@ GridMapEditor::GridMapEditor() {
 	select_mode_button->set_theme_type_variation("FlatButton");
 	select_mode_button->set_toggle_mode(true);
 	select_mode_button->set_button_group(mode_buttons_group);
-	select_mode_button->set_shortcut(ED_SHORTCUT("grid_map/selection_tool", TTR("Selection"), Key::Q, true));
+	select_mode_button->set_shortcut(ED_SHORTCUT("grid_map/selection_tool", TTRC("Selection"), Key::Q, true));
 	select_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
 	mode_buttons->add_child(select_mode_button);
@@ -1358,7 +1358,7 @@ GridMapEditor::GridMapEditor() {
 	erase_mode_button->set_theme_type_variation("FlatButton");
 	erase_mode_button->set_toggle_mode(true);
 	erase_mode_button->set_button_group(mode_buttons_group);
-	erase_mode_button->set_shortcut(ED_SHORTCUT("grid_map/erase_tool", TTR("Erase"), Key::W, true));
+	erase_mode_button->set_shortcut(ED_SHORTCUT("grid_map/erase_tool", TTRC("Erase"), Key::W, true));
 	mode_buttons->add_child(erase_mode_button);
 	erase_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
@@ -1368,7 +1368,7 @@ GridMapEditor::GridMapEditor() {
 	paint_mode_button->set_theme_type_variation("FlatButton");
 	paint_mode_button->set_toggle_mode(true);
 	paint_mode_button->set_button_group(mode_buttons_group);
-	paint_mode_button->set_shortcut(ED_SHORTCUT("grid_map/paint_tool", TTR("Paint"), Key::E, true));
+	paint_mode_button->set_shortcut(ED_SHORTCUT("grid_map/paint_tool", TTRC("Paint"), Key::E, true));
 	paint_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
 	mode_buttons->add_child(paint_mode_button);
@@ -1378,7 +1378,7 @@ GridMapEditor::GridMapEditor() {
 	pick_mode_button->set_theme_type_variation("FlatButton");
 	pick_mode_button->set_toggle_mode(true);
 	pick_mode_button->set_button_group(mode_buttons_group);
-	pick_mode_button->set_shortcut(ED_SHORTCUT("grid_map/pick_tool", TTR("Pick"), Key::R, true));
+	pick_mode_button->set_shortcut(ED_SHORTCUT("grid_map/pick_tool", TTRC("Pick"), Key::R, true));
 	pick_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
 	mode_buttons->add_child(pick_mode_button);
@@ -1392,28 +1392,28 @@ GridMapEditor::GridMapEditor() {
 
 	fill_action_button = memnew(Button);
 	fill_action_button->set_theme_type_variation("FlatButton");
-	fill_action_button->set_shortcut(ED_SHORTCUT("grid_map/fill_tool", TTR("Fill"), Key::Z, true));
+	fill_action_button->set_shortcut(ED_SHORTCUT("grid_map/fill_tool", TTRC("Fill"), Key::Z, true));
 	fill_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_FILL));
 	action_buttons->add_child(fill_action_button);
 
 	move_action_button = memnew(Button);
 	move_action_button->set_theme_type_variation("FlatButton");
-	move_action_button->set_shortcut(ED_SHORTCUT("grid_map/move_tool", TTR("Move"), Key::X, true));
+	move_action_button->set_shortcut(ED_SHORTCUT("grid_map/move_tool", TTRC("Move"), Key::X, true));
 	move_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_CUT));
 	action_buttons->add_child(move_action_button);
 
 	duplicate_action_button = memnew(Button);
 	duplicate_action_button->set_theme_type_variation("FlatButton");
-	duplicate_action_button->set_shortcut(ED_SHORTCUT("grid_map/duplicate_tool", TTR("Duplicate"), Key::C, true));
+	duplicate_action_button->set_shortcut(ED_SHORTCUT("grid_map/duplicate_tool", TTRC("Duplicate"), Key::C, true));
 	duplicate_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_DUPLICATE));
 	action_buttons->add_child(duplicate_action_button);
 
 	delete_action_button = memnew(Button);
 	delete_action_button->set_theme_type_variation("FlatButton");
-	delete_action_button->set_shortcut(ED_SHORTCUT("grid_map/delete_tool", TTR("Delete"), Key::V, true));
+	delete_action_button->set_shortcut(ED_SHORTCUT("grid_map/delete_tool", TTRC("Delete"), Key::V, true));
 	delete_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_CLEAR));
 	action_buttons->add_child(delete_action_button);
@@ -1426,21 +1426,21 @@ GridMapEditor::GridMapEditor() {
 
 	rotate_x_button = memnew(Button);
 	rotate_x_button->set_theme_type_variation("FlatButton");
-	rotate_x_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_x", TTR("Cursor Rotate X"), Key::A, true));
+	rotate_x_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_x", TTRC("Cursor Rotate X"), Key::A, true));
 	rotate_x_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_X));
 	rotation_buttons->add_child(rotate_x_button);
 
 	rotate_y_button = memnew(Button);
 	rotate_y_button->set_theme_type_variation("FlatButton");
-	rotate_y_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_y", TTR("Cursor Rotate Y"), Key::S, true));
+	rotate_y_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_y", TTRC("Cursor Rotate Y"), Key::S, true));
 	rotate_y_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_Y));
 	rotation_buttons->add_child(rotate_y_button);
 
 	rotate_z_button = memnew(Button);
 	rotate_z_button->set_theme_type_variation("FlatButton");
-	rotate_z_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_z", TTR("Cursor Rotate Z"), Key::D, true));
+	rotate_z_button->set_shortcut(ED_SHORTCUT("grid_map/cursor_rotate_z", TTRC("Cursor Rotate Z"), Key::D, true));
 	rotate_z_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_Z));
 	rotation_buttons->add_child(rotate_z_button);
@@ -1739,7 +1739,7 @@ GridMapEditorPlugin::GridMapEditorPlugin() {
 	grid_map_editor->set_custom_minimum_size(Size2(0, 200) * EDSCALE);
 	grid_map_editor->hide();
 
-	panel_button = EditorNode::get_bottom_panel()->add_item(TTR("GridMap"), grid_map_editor, ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_grid_map_bottom_panel", TTR("Toggle GridMap Bottom Panel")));
+	panel_button = EditorNode::get_bottom_panel()->add_item(TTR("GridMap"), grid_map_editor, ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_grid_map_bottom_panel", TTRC("Toggle GridMap Bottom Panel")));
 	panel_button->hide();
 }
 
