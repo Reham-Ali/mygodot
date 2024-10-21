@@ -290,6 +290,8 @@ class AnimationNodeStateMachineEditor : public AnimationTreeNodeEditorPlugin {
 	HashSet<StringName> connected_nodes;
 	void _update_connected_nodes(const StringName &p_node);
 
+	Ref<StyleBox> _adjust_stylebox_opacity(Ref<StyleBox> p_style, float p_opacity);
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();

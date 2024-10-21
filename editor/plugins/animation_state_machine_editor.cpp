@@ -951,6 +951,25 @@ void AnimationNodeStateMachineEditor::_clip_dst_line_to_rect(const Vector2 &p_fr
 	}
 }
 
+Ref<StyleBox> AnimationNodeStateMachineEditor::_adjust_stylebox_opacity(Ref<StyleBox> p_style, float p_opacity) {
+	Ref<StyleBox> style = p_style->duplicate();
+	if (style->is_class("StyleBoxFlat")) {
+		Ref<StyleBoxFlat> flat_style = style;
+		Color bg_color = flat_style->get_bg_color();
+		Color border_color = flat_style->get_border_color();
+		Color shadow_color = flat_style->get_shadow_color();
+		
+		bg_color.a *= p_opacity;
+		border_color.a *= p_opacity;
+		shadow_color.a *= p_opacity;
+		
+		flat_style->set_bg_color(bg_color);
+		flat_style->set_border_color(border_color);
+		flat_style->set_shadow_color(shadow_color);
+	}
+	return style;
+}
+
 void AnimationNodeStateMachineEditor::_state_machine_draw() {
 	AnimationTree *tree = AnimationTreeEditor::get_singleton()->get_animation_tree();
 	if (!tree) {
@@ -1194,29 +1213,21 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 		}
 
 		Ref<StyleBox> original_style = is_selected ? theme_cache.node_frame_selected : theme_cache.node_frame;
-		Ref<StyleBox> node_style = original_style->duplicate();
-
-		// Modify the colors of the duplicated StyleBox
-		if (node_style->is_class("StyleBoxFlat")) {
-			Ref<StyleBoxFlat> flat_style = node_style;
-			Color bg_color = flat_style->get_bg_color();
-			Color border_color = flat_style->get_border_color();
-			bg_color.a *= opacity;
-			border_color.a *= opacity;
-			flat_style->set_bg_color(bg_color);
-			flat_style->set_border_color(border_color);
-		}
+		Ref<StyleBox> node_style = _adjust_stylebox_opacity(original_style, opacity);
 
 		state_machine_draw->draw_style_box(node_style, nr.node);
 
 		if (!is_selected && AnimationNodeStateMachine::START_NODE == name) {
-			state_machine_draw->draw_style_box(theme_cache.node_frame_start, nr.node);
+			Ref<StyleBox> start_style = _adjust_stylebox_opacity(theme_cache.node_frame_start, opacity);
+			state_machine_draw->draw_style_box(start_style, nr.node);
 		}
 		if (!is_selected && AnimationNodeStateMachine::END_NODE == name) {
-			state_machine_draw->draw_style_box(theme_cache.node_frame_end, nr.node);
+			Ref<StyleBox> end_style = _adjust_stylebox_opacity(theme_cache.node_frame_end, opacity);
+			state_machine_draw->draw_style_box(end_style, nr.node);
 		}
 		if (playing && (blend_from == name || current == name || travel_path.has(name))) {
-			state_machine_draw->draw_style_box(theme_cache.node_frame_playing, nr.node);
+			Ref<StyleBox> playing_style = _adjust_stylebox_opacity(theme_cache.node_frame_playing, opacity);
+			state_machine_draw->draw_style_box(playing_style, nr.node);
 		}
 
 		offset.x += original_style->get_offset().x;
