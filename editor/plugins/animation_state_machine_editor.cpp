@@ -71,6 +71,7 @@ void AnimationNodeStateMachineEditor::edit(const Ref<AnimationNode> &p_node) {
 		selected_transition_index = -1;
 		selected_node = StringName();
 		selected_nodes.clear();
+		connected_nodes.clear();
 		_update_mode();
 		_update_graph();
 	}
@@ -253,6 +254,11 @@ void AnimationNodeStateMachineEditor::_state_machine_gui_input(const Ref<InputEv
 			selected_transition_from = transition_lines[closest].from_node;
 			selected_transition_to = transition_lines[closest].to_node;
 			selected_transition_index = closest;
+
+			// Update connected_nodes for the selected transition
+			connected_nodes.clear();
+			connected_nodes.insert(selected_transition_from);
+			connected_nodes.insert(selected_transition_to);
 
 			Ref<AnimationNodeStateMachineTransition> tr = state_machine->get_transition(closest);
 			if (!state_machine->is_transition_across_group(closest)) {
@@ -1137,15 +1143,28 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 		TransitionLine tl = transition_lines[i];
 		if (!tl.hidden) {
 			float opacity = 0.25; // Default to reduced opacity
-			if (connected_nodes.has(selected_node)) {
-				// Only keep full opacity for transitions directly connected to the selected node
-				if (tl.from_node == selected_node || tl.to_node == selected_node) {
+
+			if (selected_transition_from != StringName() && selected_transition_to != StringName()) {
+				// A transition is selected
+				if (tl.from_node == selected_transition_from && tl.to_node == selected_transition_to) {
+					opacity = 1.0; // Full opacity for the selected transition
+				}
+			} else if (!connected_nodes.is_empty()) {
+				// A node is selected
+				if (connected_nodes.has(selected_node)) {
+					// Only keep full opacity for transitions directly connected to the selected node
+					if (tl.from_node == selected_node || tl.to_node == selected_node) {
+						opacity = 1.0;
+					}
+				} else {
+					// If no node is selected, all transitions are at full opacity
 					opacity = 1.0;
 				}
 			} else {
-				// If no node is selected, all transitions are at full opacity
+				// If nothing is selected, all transitions are at full opacity
 				opacity = 1.0;
 			}
+
 			_connection_draw(tl.from, tl.to, tl.mode, !tl.disabled, tl.selected, tl.travel, tl.fade_ratio, tl.auto_advance, tl.is_across_group, opacity);
 		}
 	}
@@ -1164,7 +1183,13 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 		int h = nr.node.size.height;
 
 		float opacity = 1.0;
-		if (!connected_nodes.is_empty() && !connected_nodes.has(name)) {
+		if (selected_transition_from != StringName() && selected_transition_to != StringName()) {
+			// A transition is selected
+			if (name != selected_transition_from && name != selected_transition_to) {
+				opacity = 0.25;
+			}
+		} else if (!connected_nodes.is_empty() && !connected_nodes.has(name)) {
+			// A node is selected, keep existing behavior
 			opacity = 0.25;
 		}
 
