@@ -1161,12 +1161,12 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 	for (int i = 0; i < transition_lines.size(); i++) {
 		TransitionLine tl = transition_lines[i];
 		if (!tl.hidden) {
-			float opacity = 0.25; // Default to reduced opacity
+			float opacity = 0.2; // Default to reduced opacity
 
 			if (selected_transition_from != StringName() && selected_transition_to != StringName()) {
 				// A transition is selected
 				if ((tl.from_node == selected_transition_from && tl.to_node == selected_transition_to) || (tl.from_node == selected_transition_to && tl.to_node == selected_transition_from)) {
-					opacity = 1.0; // Full opacity for the selected transition
+					opacity = 1.0; // Full opacity for the selected transition pair
 				}
 			} else if (!connected_nodes.is_empty()) {
 				// A node is selected
@@ -1205,11 +1205,11 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 		if (selected_transition_from != StringName() && selected_transition_to != StringName()) {
 			// A transition is selected
 			if (name != selected_transition_from && name != selected_transition_to) {
-				opacity = 0.25;
+				opacity = 0.2;
 			}
 		} else if (!connected_nodes.is_empty() && !connected_nodes.has(name)) {
-			// A node is selected, keep existing behavior
-			opacity = 0.25;
+			// A node is selected
+			opacity = 0.2;
 		}
 
 		Ref<StyleBox> original_style = is_selected ? theme_cache.node_frame_selected : theme_cache.node_frame;
