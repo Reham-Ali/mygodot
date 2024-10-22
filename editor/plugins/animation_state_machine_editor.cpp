@@ -958,11 +958,11 @@ Ref<StyleBox> AnimationNodeStateMachineEditor::_adjust_stylebox_opacity(Ref<Styl
 		Color bg_color = flat_style->get_bg_color();
 		Color border_color = flat_style->get_border_color();
 		Color shadow_color = flat_style->get_shadow_color();
-		
+
 		bg_color.a *= p_opacity;
 		border_color.a *= p_opacity;
 		shadow_color.a *= p_opacity;
-		
+
 		flat_style->set_bg_color(bg_color);
 		flat_style->set_border_color(border_color);
 		flat_style->set_shadow_color(shadow_color);
@@ -1293,7 +1293,7 @@ void AnimationNodeStateMachineEditor::_update_connected_nodes(const StringName &
 	connected_nodes.clear();
 	if (p_node != StringName()) {
 		connected_nodes.insert(p_node);
-		
+
 		Vector<StringName> nodes_to = state_machine->get_nodes_with_transitions_to(p_node);
 		for (int i = 0; i < nodes_to.size(); i++) {
 			connected_nodes.insert(nodes_to[i]);
