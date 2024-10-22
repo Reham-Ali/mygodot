@@ -1165,7 +1165,7 @@ void AnimationNodeStateMachineEditor::_state_machine_draw() {
 
 			if (selected_transition_from != StringName() && selected_transition_to != StringName()) {
 				// A transition is selected
-				if (tl.from_node == selected_transition_from && tl.to_node == selected_transition_to) {
+				if ((tl.from_node == selected_transition_from && tl.to_node == selected_transition_to) || (tl.from_node == selected_transition_to && tl.to_node == selected_transition_from)) {
 					opacity = 1.0; // Full opacity for the selected transition
 				}
 			} else if (!connected_nodes.is_empty()) {
