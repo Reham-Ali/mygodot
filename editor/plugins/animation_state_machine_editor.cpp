@@ -231,33 +231,43 @@ void AnimationNodeStateMachineEditor::_state_machine_gui_input(const Ref<InputEv
 		//Testing transition lines
 		int closest = -1;
 		float closest_d = 1e20;
+		Vector<int> close_candidates;
 
+		// First find closest lines using point-to-segment distance
 		for (int i = 0; i < transition_lines.size(); i++) {
-			Vector2 from = transition_lines[i].from;
-			Vector2 to = transition_lines[i].to;
-			Vector2 midpoint = (from + to) / 2.0;
+			Vector2 s[2] = {
+				transition_lines[i].from,
+				transition_lines[i].to
+			};
+			Vector2 cpoint = Geometry2D::get_closest_point_to_segment(mb->get_position(), s);
+			float d = cpoint.distance_to(mb->get_position());
 
-			// Calculate distance to the midpoint
-			float d_midpoint = midpoint.distance_to(mb->get_position());
+			if (d > transition_lines[i].width) {
+				continue;
+			}
 
-			// Check if the click is within the clickable area of the line
-			Vector2 click_pos = mb->get_position();
-			Vector2 line_vec = to - from;
-			float line_length = line_vec.length();
-			Vector2 line_dir = line_vec / line_length;
-			Vector2 to_click = click_pos - from;
-			float projection = line_dir.dot(to_click);
+			// If this is very close to our current closest distance, add it to candidates
+			if (Math::abs(d - closest_d) < 2.0) { //within 2 pixels
+				close_candidates.push_back(i);
+			} else if (d < closest_d) {
+				closest_d = d;
+				closest = i;
+				close_candidates.clear();
+				close_candidates.push_back(i);
+			}
+		}
 
-			if (projection >= 0 && projection <= line_length) {
-				Vector2 closest_point = from + line_dir * projection;
-				float d_line = closest_point.distance_to(click_pos);
+		// Use midpoint distance as bias
+		if (close_candidates.size() > 1) {
+			float best_midpoint_dist = 1e20;
 
-				if (d_line <= transition_lines[i].width) {
-					// Prioritize based on distance to midpoint
-					if (d_midpoint < closest_d) {
-						closest = i;
-						closest_d = d_midpoint;
-					}
+			for (int idx : close_candidates) {
+				Vector2 midpoint = (transition_lines[idx].from + transition_lines[idx].to) / 2.0;
+				float midpoint_dist = midpoint.distance_to(mb->get_position());
+
+				if (midpoint_dist < best_midpoint_dist) {
+					best_midpoint_dist = midpoint_dist;
+					closest = idx;
 				}
 			}
 		}
