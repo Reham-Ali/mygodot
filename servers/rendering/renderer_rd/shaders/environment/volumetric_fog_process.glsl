@@ -570,7 +570,8 @@ void main() {
 
 					vec3 light_pos = spot_lights.data[light_index].position;
 					vec3 light_rel_vec = spot_lights.data[light_index].position - view_pos;
-					float d = length(light_rel_vec);
+					float sum_abs_rel_vec = 1.0 + abs(light_rel_vec.x) + abs(light_rel_vec.y) + abs(light_rel_vec.z); // Used to avoid overflows with length() when light_rel_vec components exceed sqrt(MAX_FLOAT_VALUE)
+					float d = length(light_rel_vec / sum_abs_rel_vec) * sum_abs_rel_vec;
 					float shadow_attenuation = 1.0;
 
 					if (spot_lights.data[light_index].volumetric_fog_energy > 0.001 && d * spot_lights.data[light_index].inv_radius < 1.0) {
@@ -578,7 +579,7 @@ void main() {
 
 						vec3 spot_dir = spot_lights.data[light_index].direction;
 						highp float cone_angle = spot_lights.data[light_index].cone_angle;
-						float scos = max(dot(-normalize(light_rel_vec), spot_dir), cone_angle);
+						float scos = max(dot(-light_rel_vec / d, spot_dir), cone_angle);
 						float spot_rim = max(0.0001, (1.0 - scos) / (1.0 - cone_angle));
 						attenuation *= 1.0 - pow(spot_rim, spot_lights.data[light_index].cone_attenuation);
 
@@ -600,7 +601,7 @@ void main() {
 
 							shadow_attenuation = mix(1.0 - spot_lights.data[light_index].shadow_opacity, 1.0, exp(min(0.0, (pos.z - depth)) / spot_lights.data[light_index].inv_radius * INV_FOG_FADE));
 						}
-						total_light += light * attenuation * shadow_attenuation * henyey_greenstein(dot(normalize(light_rel_vec), normalize(view_pos)), params.phase_g) * spot_lights.data[light_index].volumetric_fog_energy;
+						total_light += light * attenuation * shadow_attenuation * henyey_greenstein(dot(light_rel_vec / d, normalize(view_pos)), params.phase_g) * spot_lights.data[light_index].volumetric_fog_energy;
 					}
 				}
 			}

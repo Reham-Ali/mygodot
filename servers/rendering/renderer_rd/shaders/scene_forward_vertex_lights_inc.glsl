@@ -50,11 +50,12 @@ float get_omni_attenuation(float distance, float inv_range, float decay) {
 void light_process_omni_vertex(uint idx, vec3 vertex, vec3 eye_vec, vec3 normal, float roughness,
 		inout vec3 diffuse_light, inout vec3 specular_light) {
 	vec3 light_rel_vec = omni_lights.data[idx].position - vertex;
-	float light_length = length(light_rel_vec);
+	float sum_abs_rel_vec = 1.0 + abs(light_rel_vec.x) + abs(light_rel_vec.y) + abs(light_rel_vec.z); // Used to avoid overflows with length() when light_rel_vec components exceed sqrt(MAX_FLOAT_VALUE)
+	float light_length = length(light_rel_vec / sum_abs_rel_vec) * sum_abs_rel_vec;
 	float omni_attenuation = get_omni_attenuation(light_length, omni_lights.data[idx].inv_radius, omni_lights.data[idx].attenuation);
 	vec3 color = omni_lights.data[idx].color * omni_attenuation;
 
-	light_compute_vertex(normal, normalize(light_rel_vec), eye_vec, color, false, roughness,
+	light_compute_vertex(normal, light_rel_vec / light_length, eye_vec, color, false, roughness,
 			diffuse_light,
 			specular_light);
 }
@@ -63,20 +64,21 @@ void light_process_spot_vertex(uint idx, vec3 vertex, vec3 eye_vec, vec3 normal,
 		inout vec3 diffuse_light,
 		inout vec3 specular_light) {
 	vec3 light_rel_vec = spot_lights.data[idx].position - vertex;
-	float light_length = length(light_rel_vec);
+	float sum_abs_rel_vec = 1.0 + abs(light_rel_vec.x) + abs(light_rel_vec.y) + abs(light_rel_vec.z); // Used to avoid overflows with length() when light_rel_vec components exceed sqrt(MAX_FLOAT_VALUE)
+	float light_length = length(light_rel_vec / sum_abs_rel_vec) * sum_abs_rel_vec;
 	float spot_attenuation = get_omni_attenuation(light_length, spot_lights.data[idx].inv_radius, spot_lights.data[idx].attenuation);
 	vec3 spot_dir = spot_lights.data[idx].direction;
 
 	// This conversion to a highp float is crucial to prevent light leaking
 	// due to precision errors in the following calculations (cone angle is mediump).
 	highp float cone_angle = spot_lights.data[idx].cone_angle;
-	float scos = max(dot(-normalize(light_rel_vec), spot_dir), cone_angle);
+	float scos = max(dot(-light_rel_vec / light_length, spot_dir), cone_angle);
 	float spot_rim = max(0.0001, (1.0 - scos) / (1.0 - cone_angle));
 
 	spot_attenuation *= 1.0 - pow(spot_rim, spot_lights.data[idx].cone_attenuation);
 	vec3 color = spot_lights.data[idx].color * spot_attenuation;
 	float specular_amount = spot_lights.data[idx].specular_amount;
 
-	light_compute_vertex(normal, normalize(light_rel_vec), eye_vec, color, false, roughness,
+	light_compute_vertex(normal, light_rel_vec / light_length, eye_vec, color, false, roughness,
 			diffuse_light, specular_light);
 }
