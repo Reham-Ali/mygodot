@@ -111,7 +111,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with no
 		scene->set_int_property(12);
 
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		const Error err = packed_scene->pack(scene);
 		REQUIRE(err == OK);
 
@@ -139,7 +140,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with no
 		referenced->set_owner(scene);
 		scene->set_reference_property(referenced);
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		const Error err = packed_scene->pack(scene);
 		REQUIRE(err == OK);
 
@@ -176,7 +178,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with no
 		node_array.push_back(referenced2);
 		scene->set_reference_array_property(node_array);
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		const Error err = packed_scene->pack(scene);
 		REQUIRE(err == OK);
 
@@ -220,7 +223,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with ov
 		scene->set_int_property(12);
 
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		packed_scene->pack(scene);
 
 		// Instantiate the scene.
@@ -249,7 +253,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with ov
 		referenced->set_owner(scene);
 		scene->set_reference_property(referenced);
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		const Error err = packed_scene->pack(scene);
 		REQUIRE(err == OK);
 
@@ -304,7 +309,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instantiate from placeholder with ov
 
 		scene->set_reference_array_property(referenced_array);
 		// Pack the scene.
-		PackedScene *packed_scene = memnew(PackedScene);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
 		const Error err = packed_scene->pack(scene);
 		REQUIRE(err == OK);
 
@@ -347,7 +353,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instance a PackedScene containing an
 	internal->set_reference_property(referenced);
 
 	// Pack the internal scene.
-	PackedScene *internal_scene = memnew(PackedScene);
+	Ref<PackedScene> internal_scene;
+	internal_scene.instantiate();
 	Error err = internal_scene->pack(internal);
 	REQUIRE(err == OK);
 
@@ -376,7 +383,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instance a PackedScene containing an
 	internal_created->set("reference_property", NodePath("OriginalReference"));
 
 	// Pack the main scene.
-	PackedScene *main_scene = memnew(PackedScene);
+	Ref<PackedScene> main_scene;
+	main_scene.instantiate();
 	err = main_scene->pack(root);
 	REQUIRE(err == OK);
 
@@ -436,7 +444,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instance a PackedScene containing an
 	internal->set_reference_array_property(referenced_array);
 
 	// Pack the internal scene.
-	PackedScene *internal_scene = memnew(PackedScene);
+	Ref<PackedScene> internal_scene;
+	internal_scene.instantiate();
 	Error err = internal_scene->pack(internal);
 	REQUIRE(err == OK);
 
@@ -477,7 +486,8 @@ TEST_CASE("[SceneTree][InstancePlaceholder] Instance a PackedScene containing an
 	internal_created->set_reference_array_property(override_array);
 
 	// Pack the main scene.
-	PackedScene *main_scene = memnew(PackedScene);
+	Ref<PackedScene> main_scene;
+	main_scene.instantiate();
 	err = main_scene->pack(root);
 	REQUIRE(err == OK);
 
