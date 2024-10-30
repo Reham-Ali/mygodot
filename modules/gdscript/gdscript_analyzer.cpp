@@ -329,24 +329,31 @@ void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *
 		return;
 	}
 
+	bool throw_warning = true;
+
 	const GDScriptParser::IdentifierNode::NamePrefixUnderlineStatus underlines_status = p_identifier->get_name_prefixed_with_underlines_status();
-	// The following piece is written like this for future implementation of class-owned members (or real `private` members).
+	const GDScriptParser::ClassNode *iterated_class = parser->current_class;
+
 	const bool marked_as_private = underlines_status == GDScriptParser::IdentifierNode::UNDERLINE_MARKED_AS_PRIVATE;
-	if (!marked_as_private) {
+	const bool marked_as_protected = underlines_status == GDScriptParser::IdentifierNode::UNDERLINE_MARKED_AS_PROTECTED;
+	if (!marked_as_private && !marked_as_protected) {
 		return;
 	}
-
-	bool throw_warning = true;
-	const GDScriptParser::ClassNode *iterated_class = parser->current_class;
-	while (iterated_class != nullptr) {
-		if (iterated_class->has_member(p_identifier->name)) {
-			throw_warning = false;
-			break;
+	if (marked_as_private && iterated_class->has_member(p_identifier->name)) {
+		throw_warning = false;
+	} else if (marked_as_protected) {
+		while (iterated_class != nullptr) {
+			if (iterated_class->has_member(p_identifier->name)) {
+				throw_warning = false;
+				break;
+			}
+			iterated_class = iterated_class->base_type.class_type;
 		}
-		iterated_class = iterated_class->base_type.class_type;
 	}
+
 	if (throw_warning) {
-		parser->push_warning(p_identifier, p_is_call ? GDScriptWarning::CALLING_PRIVATE_METHOD : GDScriptWarning::ACCESSING_PRIVATE_MEMBER, p_identifier->name);
+		GDScriptWarning::Code private_warning = p_is_call ? GDScriptWarning::CALLING_PRIVATE_METHOD : GDScriptWarning::ACCESSING_PRIVATE_MEMBER;
+		parser->push_warning(p_identifier, private_warning, p_identifier->name);
 	}
 }
 #endif

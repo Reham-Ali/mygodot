@@ -889,6 +889,7 @@ public:
 		enum NamePrefixUnderlineStatus {
 			UNDERLINE_NORMAL_MARK,
 			UNDERLINE_MARKED_AS_PRIVATE,
+			UNDERLINE_MARKED_AS_PROTECTED,
 			UNDERLINE_ERROR,
 		};
 
@@ -927,8 +928,10 @@ public:
 			ERR_FAIL_COND_V_MSG(name.is_empty(), NamePrefixUnderlineStatus::UNDERLINE_ERROR, R"(The name is empty, returns error value.)");
 
 			String string_named = String(name);
-			if (string_named.begins_with("_")) {
+			if (string_named.begins_with("__")) {
 				return NamePrefixUnderlineStatus::UNDERLINE_MARKED_AS_PRIVATE;
+			} else if (string_named.begins_with("_")) {
+				return NamePrefixUnderlineStatus::UNDERLINE_MARKED_AS_PROTECTED;
 			}
 
 			return NamePrefixUnderlineStatus::UNDERLINE_NORMAL_MARK;

@@ -531,6 +531,9 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 		p_theme->set_color("axis_z_color", EditorStringName(Editor), Color(0.16, 0.55, 0.96));
 		p_theme->set_color("axis_w_color", EditorStringName(Editor), Color(0.55, 0.55, 0.55));
 
+		p_theme->set_color("private_member_color", EditorStringName(Editor), Color(0.9, 0.65, 0.45));
+		p_theme->set_color("protected_member_color", EditorStringName(Editor), Color(0.85, 0.85, 0.65));
+
 		const float prop_color_saturation = p_config.accent_color.get_s() * 0.75;
 		const float prop_color_value = p_config.accent_color.get_v();
 

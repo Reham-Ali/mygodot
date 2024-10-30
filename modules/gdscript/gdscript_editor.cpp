@@ -1066,6 +1066,21 @@ static void _list_available_types(bool p_inherit_only, GDScriptParser::Completio
 	}
 }
 
+static void _recolor_private_protected_member(const GDScriptParser::ClassNode::Member &p_member, const GDScriptParser::ClassNode *p_class, ScriptLanguage::CodeCompletionOption *p_option) {
+	String member_name = p_member.get_name();
+	if (member_name.is_empty()) {
+		return; // Skip if it's empty, to save as more performance as possible
+	}
+	if (p_member.type == GDScriptParser::ClassNode::Member::UNDEFINED || p_member.type == GDScriptParser::ClassNode::Member::GROUP) {
+		return;
+	}
+	if (member_name.begins_with("__")) {
+		p_option->theme_color_name = "private_member_color";
+	} else if (member_name.begins_with("_")) {
+		p_option->theme_color_name = "protected_member_color";
+	}
+}
+
 static void _find_identifiers_in_suite(const GDScriptParser::SuiteNode *p_suite, HashMap<String, ScriptLanguage::CodeCompletionOption> &r_result, int p_recursion_depth = 0) {
 	for (int i = 0; i < p_suite->locals.size(); i++) {
 		ScriptLanguage::CodeCompletionOption option;
@@ -1135,7 +1150,7 @@ static void _find_identifiers_in_class(const GDScriptParser::ClassNode *p_class,
 						option = ScriptLanguage::CodeCompletionOption(member.m_enum->identifier->name, ScriptLanguage::CODE_COMPLETION_KIND_ENUM, location);
 						break;
 					case GDScriptParser::ClassNode::Member::FUNCTION:
-						if (p_types_only || outer || (p_static && !member.function->is_static) || member.function->identifier->name.operator String().begins_with("@")) {
+						if (p_types_only || outer || (p_static && !member.function->is_static) || member.function->identifier->name.operator String().begins_with("@") || member.function->identifier->name == SNAME("_init")) {
 							continue;
 						}
 						option = ScriptLanguage::CodeCompletionOption(member.function->identifier->name, ScriptLanguage::CODE_COMPLETION_KIND_FUNCTION, location);
@@ -1156,6 +1171,7 @@ static void _find_identifiers_in_class(const GDScriptParser::ClassNode *p_class,
 					case GDScriptParser::ClassNode::Member::UNDEFINED:
 						break;
 				}
+				_recolor_private_protected_member(member, p_class, &option);
 				r_result.insert(option.display, option);
 			}
 			if (p_types_only) {
