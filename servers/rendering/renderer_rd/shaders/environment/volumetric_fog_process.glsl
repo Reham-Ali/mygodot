@@ -255,6 +255,12 @@ float henyey_greenstein(float cos_theta, float g) {
 	return k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));
 }
 
+// Used to avoid overflows with length() when point components exceed sqrt(MAX_REAL_T_VALUE)
+float length_safe(vec3 point) {
+	float L1_norm_p1 = 1.0 + abs(point.x) + abs(point.y) + abs(point.z);
+	return length(point / L1_norm_p1) * L1_norm_p1;
+}
+
 #define TEMPORAL_FRAMES 16
 
 const vec3 halton_map[TEMPORAL_FRAMES] = vec3[](
@@ -570,8 +576,7 @@ void main() {
 
 					vec3 light_pos = spot_lights.data[light_index].position;
 					vec3 light_rel_vec = spot_lights.data[light_index].position - view_pos;
-					float sum_abs_rel_vec = 1.0 + abs(light_rel_vec.x) + abs(light_rel_vec.y) + abs(light_rel_vec.z); // Used to avoid overflows with length() when light_rel_vec components exceed sqrt(MAX_FLOAT_VALUE)
-					float d = length(light_rel_vec / sum_abs_rel_vec) * sum_abs_rel_vec;
+					float d = length_safe(light_rel_vec);
 					float shadow_attenuation = 1.0;
 
 					if (spot_lights.data[light_index].volumetric_fog_energy > 0.001 && d * spot_lights.data[light_index].inv_radius < 1.0) {
