@@ -3502,6 +3502,11 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 				method_hint += ":";
 
 				ScriptLanguage::CodeCompletionOption option(method_hint, ScriptLanguage::CODE_COMPLETION_KIND_FUNCTION);
+
+				if (method_hint.begins_with("_init") || method_hint.begins_with("_static_init")) {
+					option.theme_color_name = "constructor_hint_color";
+				}
+
 				options.insert(option.display, option);
 			}
 		} break;

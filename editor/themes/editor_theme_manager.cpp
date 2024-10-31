@@ -531,6 +531,8 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 		p_theme->set_color("axis_z_color", EditorStringName(Editor), Color(0.16, 0.55, 0.96));
 		p_theme->set_color("axis_w_color", EditorStringName(Editor), Color(0.55, 0.55, 0.55));
 
+		p_theme->set_color("constructor_hint_color", EditorStringName(Editor), Color(1, 0.549, 0));
+
 		p_theme->set_color("private_member_color", EditorStringName(Editor), Color(0.804, 0.361, 0.361));
 		p_theme->set_color("protected_member_color", EditorStringName(Editor), Color(1, 0.549, 0));
 
