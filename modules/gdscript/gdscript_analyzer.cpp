@@ -321,6 +321,21 @@ void GDScriptAnalyzer::get_class_node_current_scope_classes(GDScriptParser::Clas
 }
 
 #ifdef DEBUG_ENABLED
+void GDScriptAnalyzer::push_warning_for_unused_private_protected_members(const GDScriptParser::AssignableNode *p_assignable) {
+	if (p_assignable == nullptr) {
+		ERR_FAIL_MSG(R"(Could not resolve a null assignable.)");
+		return;
+	}
+	if (p_assignable->usages == 0) {
+		String member_name = String(p_assignable->identifier->name);
+		if (member_name.begins_with("__")) {
+			parser->push_warning(p_assignable->identifier, GDScriptWarning::UNUSED_PRIVATE_CLASS_VARIABLE, p_assignable->identifier->name);
+		} else if (member_name.begins_with("_")) {
+			parser->push_warning(p_assignable->identifier, GDScriptWarning::UNUSED_PRIVATE_CLASS_VARIABLE, p_assignable->identifier->name);
+		}
+	}
+}
+
 void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *p_identifier, const bool p_is_call) {
 	if (p_identifier == nullptr || p_identifier->name.is_empty()) {
 		return;
@@ -329,16 +344,15 @@ void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *
 		return;
 	}
 
-	bool throw_warning = true;
-
 	const GDScriptParser::IdentifierNode::NamePrefixUnderlineStatus underlines_status = p_identifier->get_name_prefixed_with_underlines_status();
-	const GDScriptParser::ClassNode *iterated_class = parser->current_class;
-
 	const bool marked_as_private = underlines_status == GDScriptParser::IdentifierNode::UNDERLINE_MARKED_AS_PRIVATE;
 	const bool marked_as_protected = underlines_status == GDScriptParser::IdentifierNode::UNDERLINE_MARKED_AS_PROTECTED;
 	if (!marked_as_private && !marked_as_protected) {
-		return;
+		return; // Skips checking public members
 	}
+
+	bool throw_warning = true;
+	const GDScriptParser::ClassNode *iterated_class = parser->current_class;
 	if (marked_as_private && iterated_class->has_member(p_identifier->name)) {
 		throw_warning = false;
 	} else if (marked_as_protected) {
@@ -350,7 +364,6 @@ void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *
 			iterated_class = iterated_class->base_type.class_type;
 		}
 	}
-
 	if (throw_warning) {
 		GDScriptWarning::Code private_warning = p_is_call ? GDScriptWarning::CALLING_PRIVATE_METHOD : GDScriptWarning::ACCESSING_PRIVATE_MEMBER;
 		parser->push_warning(p_identifier, private_warning, p_identifier->name);
@@ -1439,9 +1452,7 @@ void GDScriptAnalyzer::resolve_class_body(GDScriptParser::ClassNode *p_class, co
 		GDScriptParser::ClassNode::Member member = p_class->members[i];
 		if (member.type == GDScriptParser::ClassNode::Member::VARIABLE) {
 #ifdef DEBUG_ENABLED
-			if (member.variable->usages == 0 && String(member.variable->identifier->name).begins_with("_")) {
-				parser->push_warning(member.variable->identifier, GDScriptWarning::UNUSED_PRIVATE_CLASS_VARIABLE, member.variable->identifier->name);
-			}
+			push_warning_for_unused_private_protected_members(member.variable);
 #endif
 
 			if (member.variable->property == GDScriptParser::VariableNode::PROP_SETGET) {

@@ -69,6 +69,7 @@ class GDScriptAnalyzer {
 
 #ifdef DEBUG_ENABLED
 	void check_identifier_private(GDScriptParser::IdentifierNode *p_identifier, const bool p_is_call = false);
+	void push_warning_for_unused_private_protected_members(const GDScriptParser::AssignableNode *p_assignable);
 #endif
 
 	Error resolve_class_inheritance(GDScriptParser::ClassNode *p_class, const GDScriptParser::Node *p_source = nullptr);
