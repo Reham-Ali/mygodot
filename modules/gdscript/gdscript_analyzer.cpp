@@ -369,7 +369,7 @@ void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *
 		parser->push_warning(p_identifier, private_warning, p_identifier->name);
 	}
 }
-#endif
+#endif // DEBUG_ENABLED
 
 Error GDScriptAnalyzer::resolve_class_inheritance(GDScriptParser::ClassNode *p_class, const GDScriptParser::Node *p_source) {
 	if (p_source == nullptr && parser->has_class(p_class)) {
