@@ -37,6 +37,18 @@
 				Returns the engine author information as a [Dictionary], where each entry is an [Array] of strings with the names of notable contributors to the Godot Engine: [code]lead_developers[/code], [code]founders[/code], [code]project_managers[/code], and [code]developers[/code].
 			</description>
 		</method>
+		<method name="get_build_system_info" qualifiers="const">
+			<return type="Dictionary" />
+			<description>
+				Returns the build system environment that was used to compile this Godot binary as a [Dictionary] containing the following entries:
+				- [code]os_name[/code] - Operating system used to compile Godot as a string (can differ from the binary's target platform)
+				- [code]compiler_name[/code] - Compiler name as a string (can be "gcc", "clang", "apple-clang", "msvc", "emcc" or "unknown")
+				- [code]compiler_version[/code] - Compiler version number as a string
+				- [code]optimization_type[/code] - Compiler optimization type (can be "none", "debug", "speed_trace", "speed", "size", "custom")
+				- [code]optimization_lto[/code] - Link-time optimization level (can be "none", "thin", "full")
+				See also [method get_version_info].
+			</description>
+		</method>
 		<method name="get_copyright_info" qualifiers="const">
 			<return type="Dictionary[]" />
 			<description>
@@ -202,6 +214,7 @@
 				}
 				[/csharp]
 				[/codeblocks]
+				See also [method get_build_system_info].
 			</description>
 		</method>
 		<method name="get_write_movie_path" qualifiers="const">
