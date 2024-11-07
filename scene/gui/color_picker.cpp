@@ -1287,6 +1287,13 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 			circle_mat->set_shader_parameter("v", v);
 		}
 	}
+
+	if (c->has_focus()) {
+		// TODO: Add and use theme focus style for those controls
+		Color focus_color = Color::from_string("#FFFFFF", color);
+		Rect2 r = Rect2(Point2(), c->get_size());
+		c->draw_rect(r, focus_color, false);
+	}
 }
 
 void ColorPicker::_slider_draw(int p_which) {
@@ -1400,6 +1407,31 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			emit_signal(SNAME("color_changed"), color);
 		}
 	}
+
+	// TODO: Is it better to cast and check it or to not check it and get vector?
+	Ref<InputEventKey> kev = p_event;
+	Ref<InputEventJoypadButton> jbev = p_event;
+	Ref<InputEventJoypadMotion> jmev = p_event;
+
+	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
+		// TODO: It should be done in process instead of input to handle joypads better
+		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
+		Vector2 color_change_vector = Input::get_singleton()->get_vector("ui_left", "ui_right", "ui_up", "ui_down");
+		if (!Math::is_zero_approx(color_change_vector.length())) {
+			if (actual_shape == SHAPE_HSV_RECTANGLE) {
+				s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
+				v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
+			}
+
+			accept_event();
+			_copy_hsv_to_color();
+			last_color = color;
+			set_pick_color(color);
+
+			// TODO: Consider handling deffered mode
+			emit_signal(SNAME("color_changed"), color);
+		}
+	}
 }
 
 void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
@@ -1449,6 +1481,30 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 		set_pick_color(color);
 
 		if (!deferred_mode_enabled) {
+			emit_signal(SNAME("color_changed"), color);
+		}
+	}
+
+	// TODO: Is it better to cast and check it or to not check it and get axis?
+	Ref<InputEventKey> kev = p_event;
+	Ref<InputEventJoypadButton> jbev = p_event;
+	Ref<InputEventJoypadMotion> jmev = p_event;
+
+	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
+		// TODO: It should be done in process instead of input to handle joypads better
+		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
+		float color_change = Input::get_singleton()->get_axis("ui_up", "ui_down");
+		if (!Math::is_zero_approx(color_change)) {
+			if (actual_shape == SHAPE_HSV_RECTANGLE) {
+				h = CLAMP(h + color_change / modes[MODE_HSV]->get_slider_max(0), 0, 1);
+			}
+
+			accept_event();
+			_copy_hsv_to_color();
+			last_color = color;
+			set_pick_color(color);
+
+			// TODO: Consider handling deffered mode
 			emit_signal(SNAME("color_changed"), color);
 		}
 	}
@@ -1832,6 +1888,7 @@ ColorPicker::ColorPicker() {
 	hb_edit->add_child(uv_edit);
 	uv_edit->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(uv_edit));
 	uv_edit->set_mouse_filter(MOUSE_FILTER_PASS);
+	uv_edit->set_focus_mode(FOCUS_ALL);
 	uv_edit->set_h_size_flags(SIZE_EXPAND_FILL);
 	uv_edit->set_v_size_flags(SIZE_EXPAND_FILL);
 	uv_edit->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(0, uv_edit));
@@ -1977,6 +2034,7 @@ ColorPicker::ColorPicker() {
 
 	w_edit = memnew(Control);
 	hb_edit->add_child(w_edit);
+	w_edit->set_focus_mode(FOCUS_ALL);
 	w_edit->set_h_size_flags(SIZE_FILL);
 	w_edit->set_v_size_flags(SIZE_EXPAND_FILL);
 	w_edit->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_w_input));
