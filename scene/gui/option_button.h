@@ -95,6 +95,7 @@ public:
 
 	void set_item_text(int p_idx, const String &p_text);
 	void set_item_icon(int p_idx, const Ref<Texture2D> &p_icon);
+	void set_item_icon_max_width(int p_idx, int p_width);
 	void set_item_id(int p_idx, int p_id);
 	void set_item_metadata(int p_idx, const Variant &p_metadata);
 	void set_item_disabled(int p_idx, bool p_disabled);
