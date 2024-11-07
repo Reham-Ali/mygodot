@@ -103,6 +103,7 @@ public:
 
 	String get_item_text(int p_idx) const;
 	Ref<Texture2D> get_item_icon(int p_idx) const;
+	int get_item_icon_max_width(int p_idx) const;
 	int get_item_id(int p_idx) const;
 	int get_item_index(int p_id) const;
 	Variant get_item_metadata(int p_idx) const;
