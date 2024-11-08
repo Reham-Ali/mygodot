@@ -56,6 +56,16 @@ OS *OS::get_singleton() {
 	return singleton;
 }
 
+static void _error_handler(void *p_this, const char *p_func, const char *p_file, int p_line, const char *p_error, const char *p_errorexp, bool p_editor_notify, ErrorHandlerType p_type) {
+	OS *os = static_cast<OS *>(p_this);
+
+	// If the error isn't a warning and failing on errors is enabled,
+	// propagate the error.
+	if (p_type != ERR_HANDLER_WARNING && os->is_fail_on_error()) {
+		os->set_error_occurred(true);
+	}
+}
+
 uint64_t OS::get_ticks_msec() const {
 	return get_ticks_usec() / 1000ULL;
 }
@@ -205,7 +215,35 @@ int OS::get_exit_code() const {
 }
 
 void OS::set_exit_code(int p_code) {
+	// Don't allow setting the exit code to success if an error has
+	// occurred. Error tracking only happens when fail on error is enabled.
+	if (p_code == EXIT_SUCCESS && _error_occurred) {
+		WARN_PRINT_ONCE("Cannot set exit code to 0 after an error has occurred.");
+		return;
+	}
 	_exit_code = p_code;
+}
+
+bool OS::is_error_occurred() const {
+	return _error_occurred;
+}
+
+void OS::set_error_occurred(bool p_occurred) {
+	_error_occurred = p_occurred;
+
+	// If an error has occurred, change the exit code to a failure (if it
+	// isn't already).
+	if (_error_occurred && _exit_code == EXIT_SUCCESS) {
+		_exit_code = EXIT_FAILURE;
+	}
+}
+
+bool OS::is_fail_on_error() const {
+	return _fail_on_error;
+}
+
+void OS::set_fail_on_error(bool p_enabled) {
+	_fail_on_error = p_enabled;
 }
 
 String OS::get_locale() const {
@@ -716,11 +754,16 @@ OS::OS() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(StdLogger));
 	_set_logger(memnew(CompositeLogger(loggers)));
+
+	eh.errfunc = _error_handler;
+	eh.userdata = this;
+	add_error_handler(&eh);
 }
 
 OS::~OS() {
 	if (_logger) {
 		memdelete(_logger);
 	}
+	remove_error_handler(&eh);
 	singleton = nullptr;
 }
