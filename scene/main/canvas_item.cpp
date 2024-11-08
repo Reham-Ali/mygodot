@@ -1140,6 +1140,24 @@ void CanvasItem::_validate_property(PropertyInfo &p_property) const {
 	}
 }
 
+PackedStringArray CanvasItem::get_configuration_warnings() const {
+	PackedStringArray warnings = Node::get_configuration_warnings();
+
+	if (clip_children_mode != CLIP_CHILDREN_DISABLED && is_inside_tree()) {
+		Node *n = get_parent();
+		while (n) {
+			CanvasItem *as_canvas_item = Object::cast_to<CanvasItem>(n);
+			if (as_canvas_item && as_canvas_item->clip_children_mode != CLIP_CHILDREN_DISABLED) {
+				warnings.push_back(RTR("An ancestor of this node clips its children, so this node will not be able to clip its children."));
+				break;
+			}
+			n = n->get_parent();
+		}
+	}
+
+	return warnings;
+}
+
 void CanvasItem::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_top_level_raise_self"), &CanvasItem::_top_level_raise_self);
 
@@ -1537,6 +1555,8 @@ void CanvasItem::set_clip_children_mode(ClipChildrenMode p_clip_mode) {
 		return;
 	}
 	clip_children_mode = p_clip_mode;
+
+	update_configuration_warnings();
 
 	if (Object::cast_to<CanvasGroup>(this) != nullptr) {
 		//avoid accidental bugs, make this not work on CanvasGroup
