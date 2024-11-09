@@ -31,7 +31,6 @@
 #include "video_stream_player.h"
 
 #include "core/os/os.h"
-#include "scene/scene_string_names.h"
 #include "servers/audio_server.h"
 
 int VideoStreamPlayer::sp_get_channel_count() const {
@@ -163,7 +162,7 @@ void VideoStreamPlayer::_notification(int p_notification) {
 					play();
 					return;
 				}
-				emit_signal(SceneStringNames::get_singleton()->finished);
+				emit_signal(SceneStringName(finished));
 			}
 		} break;
 
@@ -179,6 +178,7 @@ void VideoStreamPlayer::_notification(int p_notification) {
 			draw_texture_rect(texture, Rect2(Point2(), s), false);
 		} break;
 
+		case NOTIFICATION_SUSPENDED:
 		case NOTIFICATION_PAUSED: {
 			if (is_playing() && !is_paused()) {
 				paused_from_tree = true;
@@ -189,6 +189,13 @@ void VideoStreamPlayer::_notification(int p_notification) {
 				last_audio_time = 0;
 			}
 		} break;
+
+		case NOTIFICATION_UNSUSPENDED: {
+			if (get_tree()->is_paused()) {
+				break;
+			}
+			[[fallthrough]];
+		}
 
 		case NOTIFICATION_UNPAUSED: {
 			if (paused_from_tree) {
@@ -460,7 +467,7 @@ StringName VideoStreamPlayer::get_bus() const {
 			return bus;
 		}
 	}
-	return SceneStringNames::get_singleton()->Master;
+	return SceneStringName(Master);
 }
 
 void VideoStreamPlayer::_validate_property(PropertyInfo &p_property) const {

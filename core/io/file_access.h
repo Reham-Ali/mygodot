@@ -50,6 +50,7 @@ public:
 		ACCESS_RESOURCES,
 		ACCESS_USERDATA,
 		ACCESS_FILESYSTEM,
+		ACCESS_PIPE,
 		ACCESS_MAX
 	};
 
@@ -114,7 +115,7 @@ private:
 
 	AccessType _access_type = ACCESS_FILESYSTEM;
 	static CreateFunc create_func[ACCESS_MAX]; /** default file access creation function for a platform */
-	template <class T>
+	template <typename T>
 	static Ref<FileAccess> _create_builtin() {
 		return memnew(T);
 	}
@@ -136,7 +137,7 @@ public:
 
 	virtual bool eof_reached() const = 0; ///< reading passed EOF
 
-	virtual uint8_t get_8() const = 0; ///< get a byte
+	virtual uint8_t get_8() const; ///< get a byte
 	virtual uint16_t get_16() const; ///< get 16 bits uint
 	virtual uint32_t get_32() const; ///< get 32 bits uint
 	virtual uint64_t get_64() const; ///< get 64 bits uint
@@ -147,7 +148,7 @@ public:
 
 	Variant get_var(bool p_allow_objects = false) const;
 
-	virtual uint64_t get_buffer(uint8_t *p_dst, uint64_t p_length) const; ///< get an array of bytes
+	virtual uint64_t get_buffer(uint8_t *p_dst, uint64_t p_length) const = 0; ///< get an array of bytes, needs to be overwritten by children.
 	Vector<uint8_t> get_buffer(int64_t p_length) const;
 	virtual String get_line() const;
 	virtual String get_token() const;
@@ -165,8 +166,9 @@ public:
 
 	virtual Error get_error() const = 0; ///< get last error
 
+	virtual Error resize(int64_t p_length) = 0;
 	virtual void flush() = 0;
-	virtual void store_8(uint8_t p_dest) = 0; ///< store a byte
+	virtual void store_8(uint8_t p_dest); ///< store a byte
 	virtual void store_16(uint16_t p_dest); ///< store 16 bits uint
 	virtual void store_32(uint32_t p_dest); ///< store 32 bits uint
 	virtual void store_64(uint64_t p_dest); ///< store 64 bits uint
@@ -182,7 +184,7 @@ public:
 	virtual void store_pascal_string(const String &p_string);
 	virtual String get_pascal_string();
 
-	virtual void store_buffer(const uint8_t *p_src, uint64_t p_length); ///< store an array of bytes
+	virtual void store_buffer(const uint8_t *p_src, uint64_t p_length) = 0; ///< store an array of bytes, needs to be overwritten by children.
 	void store_buffer(const Vector<uint8_t> &p_buffer);
 
 	void store_var(const Variant &p_var, bool p_full_objects = false);
@@ -213,8 +215,8 @@ public:
 	static bool get_read_only_attribute(const String &p_file);
 	static Error set_read_only_attribute(const String &p_file, bool p_ro);
 
-	static void set_backup_save(bool p_enable) { backup_save = p_enable; };
-	static bool is_backup_save_enabled() { return backup_save; };
+	static void set_backup_save(bool p_enable) { backup_save = p_enable; }
+	static bool is_backup_save_enabled() { return backup_save; }
 
 	static String get_md5(const String &p_file);
 	static String get_sha256(const String &p_file);
@@ -226,7 +228,7 @@ public:
 	static PackedByteArray _get_file_as_bytes(const String &p_path) { return get_file_as_bytes(p_path, &last_file_open_error); }
 	static String _get_file_as_string(const String &p_path) { return get_file_as_string(p_path, &last_file_open_error); }
 
-	template <class T>
+	template <typename T>
 	static void make_default(AccessType p_access) {
 		create_func[p_access] = _create_builtin<T>;
 	}

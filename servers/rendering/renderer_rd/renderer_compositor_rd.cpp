@@ -66,6 +66,16 @@ void RendererCompositorRD::blit_render_targets_to_screen(DisplayServer::WindowID
 		RD::get_singleton()->draw_list_bind_index_array(draw_list, blit.array);
 		RD::get_singleton()->draw_list_bind_uniform_set(draw_list, render_target_descriptors[rd_texture], 0);
 
+		// We need to invert the phone rotation.
+		const int screen_rotation_degrees = -RD::get_singleton()->screen_get_pre_rotation_degrees(p_screen);
+		float screen_rotation = Math::deg_to_rad((float)screen_rotation_degrees);
+
+		blit.push_constant.rotation_cos = Math::cos(screen_rotation);
+		blit.push_constant.rotation_sin = Math::sin(screen_rotation);
+		// Swap width and height when the orientation is not the native one.
+		if (screen_rotation_degrees % 180 != 0) {
+			SWAP(screen_size.width, screen_size.height);
+		}
 		blit.push_constant.src_rect[0] = p_render_targets[i].src_rect.position.x;
 		blit.push_constant.src_rect[1] = p_render_targets[i].src_rect.position.y;
 		blit.push_constant.src_rect[2] = p_render_targets[i].src_rect.size.width;
@@ -169,7 +179,11 @@ void RendererCompositorRD::set_boot_image(const Ref<Image> &p_image, const Color
 		return;
 	}
 
-	RD::get_singleton()->screen_prepare_for_drawing(DisplayServer::MAIN_WINDOW_ID);
+	Error err = RD::get_singleton()->screen_prepare_for_drawing(DisplayServer::MAIN_WINDOW_ID);
+	if (err != OK) {
+		// Window is minimized and does not have valid swapchain, skip drawing without printing errors.
+		return;
+	}
 
 	RID texture = texture_storage->texture_allocate();
 	texture_storage->texture_2d_initialize(texture, p_image);
@@ -224,6 +238,10 @@ void RendererCompositorRD::set_boot_image(const Ref<Image> &p_image, const Color
 	RD::get_singleton()->draw_list_bind_index_array(draw_list, blit.array);
 	RD::get_singleton()->draw_list_bind_uniform_set(draw_list, uset, 0);
 
+	const int screen_rotation_degrees = -RD::get_singleton()->screen_get_pre_rotation_degrees(DisplayServer::MAIN_WINDOW_ID);
+	float screen_rotation = Math::deg_to_rad((float)screen_rotation_degrees);
+	blit.push_constant.rotation_cos = Math::cos(screen_rotation);
+	blit.push_constant.rotation_sin = Math::sin(screen_rotation);
 	blit.push_constant.src_rect[0] = 0.0;
 	blit.push_constant.src_rect[1] = 0.0;
 	blit.push_constant.src_rect[2] = 1.0;
@@ -295,6 +313,7 @@ RendererCompositorRD::RendererCompositorRD() {
 		}
 	}
 
+	ERR_FAIL_COND_MSG(singleton != nullptr, "A RendererCompositorRD singleton already exists.");
 	singleton = this;
 
 	utilities = memnew(RendererRD::Utilities);
@@ -326,6 +345,7 @@ RendererCompositorRD::RendererCompositorRD() {
 }
 
 RendererCompositorRD::~RendererCompositorRD() {
+	singleton = nullptr;
 	memdelete(uniform_set_cache);
 	memdelete(framebuffer_cache);
 	ShaderRD::set_shader_cache_dir(String());

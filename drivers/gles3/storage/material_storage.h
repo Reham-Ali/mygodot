@@ -43,7 +43,6 @@
 #include "servers/rendering/storage/utilities.h"
 
 #include "drivers/gles3/shaders/canvas.glsl.gen.h"
-#include "drivers/gles3/shaders/cubemap_filter.glsl.gen.h"
 #include "drivers/gles3/shaders/particles.glsl.gen.h"
 #include "drivers/gles3/shaders/scene.glsl.gen.h"
 #include "drivers/gles3/shaders/sky.glsl.gen.h"
@@ -249,6 +248,7 @@ struct SceneShaderData : public ShaderData {
 		BLEND_MODE_ADD,
 		BLEND_MODE_SUB,
 		BLEND_MODE_MUL,
+		BLEND_MODE_PREMULT_ALPHA,
 		BLEND_MODE_ALPHA_TO_COVERAGE
 	};
 
@@ -543,7 +543,6 @@ public:
 		CanvasShaderGLES3 canvas_shader;
 		SkyShaderGLES3 sky_shader;
 		SceneShaderGLES3 scene_shader;
-		CubemapFilterShaderGLES3 cubemap_filter_shader;
 		ParticlesShaderGLES3 particles_process_shader;
 
 		ShaderCompiler compiler_canvas;
@@ -577,8 +576,8 @@ public:
 
 	/* SHADER API */
 
-	Shader *get_shader(RID p_rid) { return shader_owner.get_or_null(p_rid); };
-	bool owns_shader(RID p_rid) { return shader_owner.owns(p_rid); };
+	Shader *get_shader(RID p_rid) { return shader_owner.get_or_null(p_rid); }
+	bool owns_shader(RID p_rid) { return shader_owner.owns(p_rid); }
 
 	void _shader_make_dirty(Shader *p_shader);
 
@@ -599,8 +598,8 @@ public:
 
 	/* MATERIAL API */
 
-	Material *get_material(RID p_rid) { return material_owner.get_or_null(p_rid); };
-	bool owns_material(RID p_rid) { return material_owner.owns(p_rid); };
+	Material *get_material(RID p_rid) { return material_owner.get_or_null(p_rid); }
+	bool owns_material(RID p_rid) { return material_owner.owns(p_rid); }
 
 	void _material_queue_update(Material *material, bool p_uniform, bool p_texture);
 	void _update_queued_materials();

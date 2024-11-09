@@ -48,10 +48,10 @@
 void SceneCreateDialog::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
-			select_node_button->set_icon(get_editor_theme_icon(SNAME("ClassList")));
-			node_type_2d->set_icon(get_editor_theme_icon(SNAME("Node2D")));
-			node_type_3d->set_icon(get_editor_theme_icon(SNAME("Node3D")));
-			node_type_gui->set_icon(get_editor_theme_icon(SNAME("Control")));
+			select_node_button->set_button_icon(get_editor_theme_icon(SNAME("ClassList")));
+			node_type_2d->set_button_icon(get_editor_theme_icon(SNAME("Node2D")));
+			node_type_3d->set_button_icon(get_editor_theme_icon(SNAME("Node3D")));
+			node_type_gui->set_button_icon(get_editor_theme_icon(SNAME("Control")));
 			node_type_other->add_theme_icon_override(SNAME("icon"), get_editor_theme_icon(SNAME("Node")));
 		} break;
 
@@ -72,7 +72,7 @@ void SceneCreateDialog::config(const String &p_dir) {
 void SceneCreateDialog::accept_create() {
 	if (!get_ok_button()->is_disabled()) {
 		hide();
-		emit_signal(SNAME("confirmed"));
+		emit_signal(SceneStringName(confirmed));
 	}
 }
 
@@ -121,9 +121,9 @@ void SceneCreateDialog::update_dialog() {
 
 	const StringName root_type_name = StringName(other_type_display->get_text());
 	if (has_theme_icon(root_type_name, EditorStringName(EditorIcons))) {
-		node_type_other->set_icon(get_editor_theme_icon(root_type_name));
+		node_type_other->set_button_icon(get_editor_theme_icon(root_type_name));
 	} else {
-		node_type_other->set_icon(nullptr);
+		node_type_other->set_button_icon(nullptr);
 	}
 
 	root_name = root_name_edit->get_text().strip_edges();
@@ -241,7 +241,7 @@ SceneCreateDialog::SceneCreateDialog() {
 
 		select_node_button = memnew(Button);
 		hb->add_child(select_node_button);
-		select_node_button->connect("pressed", callable_mp(this, &SceneCreateDialog::browse_types));
+		select_node_button->connect(SceneStringName(pressed), callable_mp(this, &SceneCreateDialog::browse_types));
 	}
 
 	{
@@ -291,9 +291,9 @@ SceneCreateDialog::SceneCreateDialog() {
 	validation_panel->set_update_callback(callable_mp(this, &SceneCreateDialog::update_dialog));
 	validation_panel->set_accept_button(get_ok_button());
 
-	node_type_group->connect("pressed", callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
-	scene_name_edit->connect("text_changed", callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
-	root_name_edit->connect("text_changed", callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
+	node_type_group->connect(SceneStringName(pressed), callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
+	scene_name_edit->connect(SceneStringName(text_changed), callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
+	root_name_edit->connect(SceneStringName(text_changed), callable_mp(validation_panel, &EditorValidationPanel::update).unbind(1));
 
 	set_title(TTR("Create New Scene"));
 	set_min_size(Size2i(400 * EDSCALE, 0));

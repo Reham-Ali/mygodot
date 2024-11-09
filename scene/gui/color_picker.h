@@ -130,7 +130,6 @@ private:
 	Popup *picker_window = nullptr;
 	// Legacy color picking.
 	TextureRect *picker_texture_rect = nullptr;
-	Panel *picker_preview = nullptr;
 	Label *picker_preview_label = nullptr;
 	Ref<StyleBoxFlat> picker_preview_style_box;
 	Color picker_color;
@@ -317,12 +316,11 @@ public:
 	void set_edit_alpha(bool p_show);
 	bool is_editing_alpha() const;
 
-	int get_preset_size();
-
 	void _set_pick_color(const Color &p_color, bool p_update_sliders);
 	void set_pick_color(const Color &p_color);
 	Color get_pick_color() const;
 	void set_old_color(const Color &p_color);
+	Color get_old_color() const;
 
 	void set_display_old_color(bool p_enabled);
 	bool is_displaying_old_color() const;
@@ -373,6 +371,10 @@ public:
 
 	ColorPicker();
 	~ColorPicker();
+};
+
+class ColorPickerPopupPanel : public PopupPanel {
+	virtual void _input_from_window(const Ref<InputEvent> &p_event) override;
 };
 
 class ColorPickerButton : public Button {

@@ -121,7 +121,7 @@ String EventListenerLineEdit::get_event_text(const Ref<InputEvent> &p_event, boo
 }
 
 String EventListenerLineEdit::get_device_string(int p_device) {
-	if (p_device == InputMap::ALL_DEVICES) {
+	if (p_device == InputEvent::DEVICE_ID_ALL_DEVICES) {
 		return TTR("All Devices");
 	}
 	return TTR("Device") + " " + itos(p_device);
@@ -216,9 +216,9 @@ void EventListenerLineEdit::grab_focus() {
 void EventListenerLineEdit::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			connect("text_changed", callable_mp(this, &EventListenerLineEdit::_on_text_changed));
-			connect("focus_entered", callable_mp(this, &EventListenerLineEdit::_on_focus));
-			connect("focus_exited", callable_mp(this, &EventListenerLineEdit::_on_unfocus));
+			connect(SceneStringName(text_changed), callable_mp(this, &EventListenerLineEdit::_on_text_changed));
+			connect(SceneStringName(focus_entered), callable_mp(this, &EventListenerLineEdit::_on_focus));
+			connect(SceneStringName(focus_exited), callable_mp(this, &EventListenerLineEdit::_on_unfocus));
 			set_right_icon(get_editor_theme_icon(SNAME("Keyboard")));
 			set_clear_button_enabled(true);
 		} break;

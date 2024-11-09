@@ -62,8 +62,9 @@ protected:
 	static void _bind_methods();
 
 public:
-	static const int DEVICE_ID_EMULATION;
-	static const int DEVICE_ID_INTERNAL;
+	inline static constexpr int DEVICE_ID_EMULATION = -1;
+	inline static constexpr int DEVICE_ID_INTERNAL = -2;
+	inline static constexpr int DEVICE_ID_ALL_DEVICES = -3; // Signify that a given Action can be triggered by any device.
 
 	void set_device(int p_device);
 	int get_device() const;
@@ -453,6 +454,7 @@ class InputEventAction : public InputEvent {
 
 	StringName action;
 	float strength = 1.0f;
+	int event_index = -1;
 
 protected:
 	static void _bind_methods();
@@ -465,6 +467,9 @@ public:
 
 	void set_strength(float p_strength);
 	float get_strength() const;
+
+	void set_event_index(int p_index);
+	int get_event_index() const;
 
 	virtual bool is_action(const StringName &p_action) const;
 

@@ -4,6 +4,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Godot.NativeInterop;
+using System.Diagnostics;
 
 #nullable enable
 
@@ -14,6 +15,8 @@ namespace Godot.Collections
     /// typed elements allocated in the engine in C++. Useful when
     /// interfacing with the engine.
     /// </summary>
+    [DebuggerTypeProxy(typeof(DictionaryDebugView<Variant, Variant>))]
+    [DebuggerDisplay("Count = {Count}")]
     public sealed class Dictionary :
         IDictionary<Variant, Variant>,
         IReadOnlyDictionary<Variant, Variant>,
@@ -171,7 +174,7 @@ namespace Godot.Collections
             var keys = Array.CreateTakingOwnershipOfDisposableValue(keysArray);
 
             godot_array valuesArray;
-            NativeFuncs.godotsharp_dictionary_keys(ref self, out valuesArray);
+            NativeFuncs.godotsharp_dictionary_values(ref self, out valuesArray);
             var values = Array.CreateTakingOwnershipOfDisposableValue(valuesArray);
 
             int count = NativeFuncs.godotsharp_dictionary_count(ref self);
@@ -480,6 +483,8 @@ namespace Godot.Collections
     /// </summary>
     /// <typeparam name="TKey">The type of the dictionary's keys.</typeparam>
     /// <typeparam name="TValue">The type of the dictionary's values.</typeparam>
+    [DebuggerTypeProxy(typeof(DictionaryDebugView<,>))]
+    [DebuggerDisplay("Count = {Count}")]
     public class Dictionary<[MustBeVariant] TKey, [MustBeVariant] TValue> :
         IDictionary<TKey, TValue>,
         IReadOnlyDictionary<TKey, TValue>,

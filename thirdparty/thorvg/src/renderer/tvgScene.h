@@ -101,7 +101,7 @@ struct Scene::Impl
         return true;
     }
 
-    RenderData update(RenderMethod* renderer, const RenderTransform* transform, Array<RenderData>& clips, uint8_t opacity, RenderUpdateFlag flag, bool clipper)
+    RenderData update(RenderMethod* renderer, const Matrix& transform, Array<RenderData>& clips, uint8_t opacity, RenderUpdateFlag flag, TVG_UNUSED bool clipper)
     {
         if ((needComp = needComposition(opacity))) {
             /* Overriding opacity value. If this scene is half-translucent,
@@ -109,20 +109,10 @@ struct Scene::Impl
             this->opacity = opacity;
             opacity = 255;
         }
-
-        if (clipper) {
-            Array<RenderData> rds(paints.size());
-            for (auto paint : paints) {
-                rds.push(paint->pImpl->update(renderer, transform, clips, opacity, flag, true));
-            }
-            rd = renderer->prepare(rds, rd, transform, clips, opacity, flag);
-            return rd;
-        } else {
-            for (auto paint : paints) {
-                paint->pImpl->update(renderer, transform, clips, opacity, flag, false);
-            }
-            return nullptr;
+        for (auto paint : paints) {
+            paint->pImpl->update(renderer, transform, clips, opacity, flag, false);
         }
+        return nullptr;
     }
 
     bool render(RenderMethod* renderer)
@@ -130,10 +120,11 @@ struct Scene::Impl
         Compositor* cmp = nullptr;
         auto ret = true;
 
+        renderer->blend(scene->blend());
+
         if (needComp) {
             cmp = renderer->target(bounds(renderer), renderer->colorSpace());
             renderer->beginComposite(cmp, CompositeMethod::None, opacity);
-            needComp = false;
         }
 
         for (auto paint : paints) {
@@ -199,10 +190,12 @@ struct Scene::Impl
         return true;
     }
 
-    Paint* duplicate()
+    Paint* duplicate(Paint* ret)
     {
-        auto ret = Scene::gen().release();
-        auto dup = ret->pImpl;
+        if (ret) TVGERR("RENDERER", "TODO: duplicate()");
+
+        auto scene = Scene::gen().release();
+        auto dup = scene->pImpl;
 
         for (auto paint : paints) {
             auto cdup = paint->duplicate();
@@ -210,7 +203,7 @@ struct Scene::Impl
             dup->paints.push_back(cdup);
         }
 
-        return ret;
+        return scene;
     }
 
     void clear(bool free)

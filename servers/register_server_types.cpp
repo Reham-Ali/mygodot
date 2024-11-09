@@ -43,6 +43,7 @@
 #include "audio/effects/audio_effect_distortion.h"
 #include "audio/effects/audio_effect_eq.h"
 #include "audio/effects/audio_effect_filter.h"
+#include "audio/effects/audio_effect_hard_limiter.h"
 #include "audio/effects/audio_effect_limiter.h"
 #include "audio/effects/audio_effect_panner.h"
 #include "audio/effects/audio_effect_phaser.h"
@@ -56,6 +57,7 @@
 #include "camera/camera_feed.h"
 #include "camera_server.h"
 #include "debugger/servers_debugger.h"
+#include "display/native_menu.h"
 #include "display_server.h"
 #include "movie_writer/movie_writer.h"
 #include "movie_writer/movie_writer_mjpeg.h"
@@ -76,55 +78,41 @@
 #include "text/text_server_dummy.h"
 #include "text/text_server_extension.h"
 #include "text_server.h"
-#include "xr/xr_face_tracker.h"
-#include "xr/xr_hand_tracker.h"
-#include "xr/xr_interface.h"
-#include "xr/xr_interface_extension.h"
-#include "xr/xr_positional_tracker.h"
-#include "xr_server.h"
 
 // 2D physics and navigation.
 #include "navigation_server_2d.h"
-#include "physics_2d/godot_physics_server_2d.h"
 #include "physics_server_2d.h"
+#include "physics_server_2d_dummy.h"
 #include "physics_server_2d_wrap_mt.h"
 #include "servers/extensions/physics_server_2d_extension.h"
 
 // 3D physics and navigation (3D navigation is needed for 2D).
 #include "navigation_server_3d.h"
 #ifndef _3D_DISABLED
-#include "physics_3d/godot_physics_server_3d.h"
 #include "physics_server_3d.h"
+#include "physics_server_3d_dummy.h"
 #include "physics_server_3d_wrap_mt.h"
 #include "servers/extensions/physics_server_3d_extension.h"
+#include "xr/xr_body_tracker.h"
+#include "xr/xr_controller_tracker.h"
+#include "xr/xr_face_tracker.h"
+#include "xr/xr_hand_tracker.h"
+#include "xr/xr_interface.h"
+#include "xr/xr_interface_extension.h"
+#include "xr/xr_positional_tracker.h"
+#include "xr_server.h"
 #endif // _3D_DISABLED
 
 ShaderTypes *shader_types = nullptr;
 
 #ifndef _3D_DISABLED
-static PhysicsServer3D *_createGodotPhysics3DCallback() {
-#ifdef THREADS_ENABLED
-	bool using_threads = GLOBAL_GET("physics/3d/run_on_separate_thread");
-#else
-	bool using_threads = false;
-#endif
-
-	PhysicsServer3D *physics_server_3d = memnew(GodotPhysicsServer3D(using_threads));
-
-	return memnew(PhysicsServer3DWrapMT(physics_server_3d, using_threads));
+static PhysicsServer3D *_create_dummy_physics_server_3d() {
+	return memnew(PhysicsServer3DDummy);
 }
 #endif // _3D_DISABLED
 
-static PhysicsServer2D *_createGodotPhysics2DCallback() {
-#ifdef THREADS_ENABLED
-	bool using_threads = GLOBAL_GET("physics/2d/run_on_separate_thread");
-#else
-	bool using_threads = false;
-#endif
-
-	PhysicsServer2D *physics_server_2d = memnew(GodotPhysicsServer2D(using_threads));
-
-	return memnew(PhysicsServer2DWrapMT(physics_server_2d, using_threads));
+static PhysicsServer2D *_create_dummy_physics_server_2d() {
+	return memnew(PhysicsServer2DDummy);
 }
 
 static bool has_server_feature_callback(const String &p_feature) {
@@ -161,30 +149,19 @@ void register_server_types() {
 	GDREGISTER_ABSTRACT_CLASS(RenderingServer);
 	GDREGISTER_CLASS(AudioServer);
 
-	GDREGISTER_ABSTRACT_CLASS(NavigationServer2D);
-	GDREGISTER_ABSTRACT_CLASS(NavigationServer3D);
-	GDREGISTER_CLASS(NavigationPathQueryParameters2D);
-	GDREGISTER_CLASS(NavigationPathQueryParameters3D);
-	GDREGISTER_CLASS(NavigationPathQueryResult2D);
-	GDREGISTER_CLASS(NavigationPathQueryResult3D);
+	GDREGISTER_CLASS(NativeMenu);
 
-	GDREGISTER_CLASS(XRServer);
 	GDREGISTER_CLASS(CameraServer);
 
 	GDREGISTER_ABSTRACT_CLASS(RenderingDevice);
-
-	GDREGISTER_ABSTRACT_CLASS(XRInterface);
-	GDREGISTER_CLASS(XRHandTracker);
-	GDREGISTER_CLASS(XRInterfaceExtension); // can't register this as virtual because we need a creation function for our extensions.
-	GDREGISTER_CLASS(XRPose);
-	GDREGISTER_CLASS(XRPositionalTracker);
-	GDREGISTER_CLASS(XRFaceTracker);
 
 	GDREGISTER_CLASS(AudioStream);
 	GDREGISTER_CLASS(AudioStreamPlayback);
 	GDREGISTER_VIRTUAL_CLASS(AudioStreamPlaybackResampled);
 	GDREGISTER_CLASS(AudioStreamMicrophone);
 	GDREGISTER_CLASS(AudioStreamRandomizer);
+	GDREGISTER_CLASS(AudioSample);
+	GDREGISTER_CLASS(AudioSamplePlayback);
 	GDREGISTER_VIRTUAL_CLASS(AudioEffect);
 	GDREGISTER_VIRTUAL_CLASS(AudioEffectInstance);
 	GDREGISTER_CLASS(AudioEffectEQ);
@@ -221,6 +198,7 @@ void register_server_types() {
 		GDREGISTER_CLASS(AudioEffectDelay);
 		GDREGISTER_CLASS(AudioEffectCompressor);
 		GDREGISTER_CLASS(AudioEffectLimiter);
+		GDREGISTER_CLASS(AudioEffectHardLimiter);
 		GDREGISTER_CLASS(AudioEffectPitchShift);
 		GDREGISTER_CLASS(AudioEffectPhaser);
 
@@ -295,8 +273,11 @@ void register_server_types() {
 
 	GLOBAL_DEF(PropertyInfo(Variant::STRING, PhysicsServer2DManager::setting_property_name, PROPERTY_HINT_ENUM, "DEFAULT"), "DEFAULT");
 
-	PhysicsServer2DManager::get_singleton()->register_server("GodotPhysics2D", callable_mp_static(_createGodotPhysics2DCallback));
-	PhysicsServer2DManager::get_singleton()->set_default_server("GodotPhysics2D");
+	PhysicsServer2DManager::get_singleton()->register_server("Dummy", callable_mp_static(_create_dummy_physics_server_2d));
+
+	GDREGISTER_ABSTRACT_CLASS(NavigationServer2D);
+	GDREGISTER_CLASS(NavigationPathQueryParameters2D);
+	GDREGISTER_CLASS(NavigationPathQueryResult2D);
 
 #ifndef _3D_DISABLED
 	// Physics 3D
@@ -325,9 +306,24 @@ void register_server_types() {
 
 	GLOBAL_DEF(PropertyInfo(Variant::STRING, PhysicsServer3DManager::setting_property_name, PROPERTY_HINT_ENUM, "DEFAULT"), "DEFAULT");
 
-	PhysicsServer3DManager::get_singleton()->register_server("GodotPhysics3D", callable_mp_static(_createGodotPhysics3DCallback));
-	PhysicsServer3DManager::get_singleton()->set_default_server("GodotPhysics3D");
+	PhysicsServer3DManager::get_singleton()->register_server("Dummy", callable_mp_static(_create_dummy_physics_server_3d));
+
+	GDREGISTER_ABSTRACT_CLASS(XRInterface);
+	GDREGISTER_CLASS(XRVRS);
+	GDREGISTER_CLASS(XRBodyTracker);
+	GDREGISTER_CLASS(XRControllerTracker);
+	GDREGISTER_CLASS(XRFaceTracker);
+	GDREGISTER_CLASS(XRHandTracker);
+	GDREGISTER_CLASS(XRInterfaceExtension); // can't register this as virtual because we need a creation function for our extensions.
+	GDREGISTER_CLASS(XRPose);
+	GDREGISTER_CLASS(XRPositionalTracker);
+	GDREGISTER_CLASS(XRServer);
+	GDREGISTER_ABSTRACT_CLASS(XRTracker);
 #endif // _3D_DISABLED
+
+	GDREGISTER_ABSTRACT_CLASS(NavigationServer3D);
+	GDREGISTER_CLASS(NavigationPathQueryParameters3D);
+	GDREGISTER_CLASS(NavigationPathQueryResult3D);
 
 	writer_mjpeg = memnew(MovieWriterMJPEG);
 	MovieWriter::add_writer(writer_mjpeg);
@@ -352,17 +348,19 @@ void unregister_server_types() {
 void register_server_singletons() {
 	OS::get_singleton()->benchmark_begin_measure("Servers", "Register Singletons");
 
-	Engine::get_singleton()->add_singleton(Engine::Singleton("DisplayServer", DisplayServer::get_singleton(), "DisplayServer"));
-	Engine::get_singleton()->add_singleton(Engine::Singleton("RenderingServer", RenderingServer::get_singleton(), "RenderingServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("AudioServer", AudioServer::get_singleton(), "AudioServer"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("CameraServer", CameraServer::get_singleton(), "CameraServer"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("DisplayServer", DisplayServer::get_singleton(), "DisplayServer"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("NativeMenu", NativeMenu::get_singleton(), "NativeMenu"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer2D", NavigationServer2D::get_singleton(), "NavigationServer2D"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer3D", NavigationServer3D::get_singleton(), "NavigationServer3D"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("RenderingServer", RenderingServer::get_singleton(), "RenderingServer"));
+
 	Engine::get_singleton()->add_singleton(Engine::Singleton("PhysicsServer2D", PhysicsServer2D::get_singleton(), "PhysicsServer2D"));
 #ifndef _3D_DISABLED
 	Engine::get_singleton()->add_singleton(Engine::Singleton("PhysicsServer3D", PhysicsServer3D::get_singleton(), "PhysicsServer3D"));
-#endif // _3D_DISABLED
-	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer2D", NavigationServer2D::get_singleton(), "NavigationServer2D"));
-	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer3D", NavigationServer3D::get_singleton(), "NavigationServer3D"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("XRServer", XRServer::get_singleton(), "XRServer"));
-	Engine::get_singleton()->add_singleton(Engine::Singleton("CameraServer", CameraServer::get_singleton(), "CameraServer"));
+#endif // _3D_DISABLED
 
 	OS::get_singleton()->benchmark_end_measure("Servers", "Register Singletons");
 }

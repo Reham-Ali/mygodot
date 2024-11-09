@@ -33,7 +33,7 @@
 #include "core/io/file_access.h"
 #include "core/io/resource_saver.h"
 #include "core/string/optimized_translation.h"
-#include "core/string/translation.h"
+#include "core/string/translation_server.h"
 
 String ResourceImporterCSVTranslation::get_importer_name() const {
 	return "csv_translation";
@@ -122,11 +122,12 @@ Error ResourceImporterCSVTranslation::import(const String &p_source_file, const 
 		if (!key.is_empty()) {
 			ERR_CONTINUE_MSG(line.size() != locales.size() + (int)skipped_locales.size() + 1, vformat("Error importing CSV translation: expected %d locale(s), but the '%s' key has %d locale(s).", locales.size(), key, line.size() - 1));
 
+			int write_index = 0; // Keep track of translations written in case some locales are skipped.
 			for (int i = 1; i < line.size(); i++) {
 				if (skipped_locales.has(i)) {
 					continue;
 				}
-				translations.write[i - 1]->add_message(key, line[i].c_unescape());
+				translations.write[write_index++]->add_message(key, line[i].c_unescape());
 			}
 		}
 	} while (!f->eof_reached());

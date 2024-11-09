@@ -30,29 +30,22 @@
 
 #include "editor_bottom_panel.h"
 
-#include "core/version.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_about.h"
 #include "editor/editor_command_palette.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
+#include "editor/engine_update_label.h"
 #include "editor/gui/editor_toaster.h"
+#include "editor/gui/editor_version_button.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
-#include "scene/gui/link_button.h"
-
-// The metadata key used to store and retrieve the version text to copy to the clipboard.
-static const String META_TEXT_TO_COPY = "text_to_copy";
 
 void EditorBottomPanel::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
-			expand_button->set_icon(get_editor_theme_icon(SNAME("ExpandBottomDock")));
-			for (int i = 0; i < items.size(); i++) {
-				items.write[i].button->add_theme_style_override("pressed", get_theme_stylebox(SNAME("MenuTransparent"), EditorStringName(EditorStyles)));
-				items.write[i].button->add_theme_style_override("hover_pressed", get_theme_stylebox(SNAME("MenuHover"), EditorStringName(EditorStyles)));
-			}
+			expand_button->set_button_icon(get_editor_theme_icon(SNAME("ExpandBottomDock")));
 		} break;
 	}
 }
@@ -83,9 +76,9 @@ void EditorBottomPanel::_switch_to_item(bool p_visible, int p_idx) {
 		}
 		if (EditorDebuggerNode::get_singleton() == items[p_idx].control) {
 			// This is the debug panel which uses tabs, so the top section should be smaller.
-			add_theme_style_override("panel", get_theme_stylebox(SNAME("BottomPanelDebuggerOverride"), EditorStringName(EditorStyles)));
+			add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SNAME("BottomPanelDebuggerOverride"), EditorStringName(EditorStyles)));
 		} else {
-			add_theme_style_override("panel", get_theme_stylebox(SNAME("BottomPanel"), EditorStringName(EditorStyles)));
+			add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SNAME("BottomPanel"), EditorStringName(EditorStyles)));
 		}
 		center_split->set_dragger_visibility(SplitContainer::DRAGGER_VISIBLE);
 		center_split->set_collapsed(false);
@@ -94,7 +87,7 @@ void EditorBottomPanel::_switch_to_item(bool p_visible, int p_idx) {
 		}
 		expand_button->show();
 	} else {
-		add_theme_style_override("panel", get_theme_stylebox(SNAME("BottomPanel"), EditorStringName(EditorStyles)));
+		add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SNAME("BottomPanel"), EditorStringName(EditorStyles)));
 		items[p_idx].button->set_pressed_no_signal(false);
 		items[p_idx].control->set_visible(false);
 		center_split->set_dragger_visibility(SplitContainer::DRAGGER_HIDDEN);
@@ -104,14 +97,12 @@ void EditorBottomPanel::_switch_to_item(bool p_visible, int p_idx) {
 			EditorNode::get_top_split()->show();
 		}
 	}
+
+	last_opened_control = items[p_idx].control;
 }
 
 void EditorBottomPanel::_expand_button_toggled(bool p_pressed) {
 	EditorNode::get_top_split()->set_visible(!p_pressed);
-}
-
-void EditorBottomPanel::_version_button_pressed() {
-	DisplayServer::get_singleton()->clipboard_set(version_btn->get_meta(META_TEXT_TO_COPY));
 }
 
 bool EditorBottomPanel::_button_drag_hover(const Vector2 &, const Variant &, Button *p_button, Control *p_control) {
@@ -155,12 +146,13 @@ void EditorBottomPanel::load_layout_from_config(Ref<ConfigFile> p_config_file, c
 	}
 }
 
-Button *EditorBottomPanel::add_item(String p_text, Control *p_item, bool p_at_front) {
+Button *EditorBottomPanel::add_item(String p_text, Control *p_item, const Ref<Shortcut> &p_shortcut, bool p_at_front) {
 	Button *tb = memnew(Button);
-	tb->set_theme_type_variation("FlatMenuButton");
-	tb->connect("toggled", callable_mp(this, &EditorBottomPanel::_switch_by_control).bind(p_item));
+	tb->set_theme_type_variation("BottomPanelButton");
+	tb->connect(SceneStringName(toggled), callable_mp(this, &EditorBottomPanel::_switch_by_control).bind(p_item));
 	tb->set_drag_forwarding(Callable(), callable_mp(this, &EditorBottomPanel::_button_drag_hover).bind(tb, p_item), Callable());
 	tb->set_text(p_text);
+	tb->set_shortcut(p_shortcut);
 	tb->set_toggle_mode(true);
 	tb->set_focus_mode(Control::FOCUS_NONE);
 	item_vbox->add_child(p_item);
@@ -177,16 +169,21 @@ Button *EditorBottomPanel::add_item(String p_text, Control *p_item, bool p_at_fr
 	bpi.button = tb;
 	bpi.control = p_item;
 	bpi.name = p_text;
-	items.push_back(bpi);
+	if (p_at_front) {
+		items.insert(0, bpi);
+	} else {
+		items.push_back(bpi);
+	}
 
 	return tb;
 }
 
 void EditorBottomPanel::remove_item(Control *p_item) {
+	bool was_visible = false;
 	for (int i = 0; i < items.size(); i++) {
 		if (items[i].control == p_item) {
 			if (p_item->is_visible_in_tree()) {
-				_switch_to_item(false, i);
+				was_visible = true;
 			}
 			item_vbox->remove_child(items[i].control);
 			button_hbox->remove_child(items[i].button);
@@ -194,6 +191,16 @@ void EditorBottomPanel::remove_item(Control *p_item) {
 			items.remove_at(i);
 			break;
 		}
+	}
+
+	if (was_visible) {
+		// Open the first panel to ensure that if the removed dock was visible, the bottom
+		// panel will not collapse.
+		_switch_to_item(true, 0);
+	} else if (last_opened_control == p_item) {
+		// When a dock is removed by plugins, it might not have been visible, and it
+		// might have been the last_opened_control. We need to make sure to reset the last opened control.
+		last_opened_control = items[0].control;
 	}
 }
 
@@ -220,6 +227,17 @@ void EditorBottomPanel::hide_bottom_panel() {
 	}
 }
 
+void EditorBottomPanel::toggle_last_opened_bottom_panel() {
+	// Select by control instead of index, so that the last bottom panel is opened correctly
+	// if it's been reordered since.
+	if (last_opened_control) {
+		_switch_by_control(!last_opened_control->is_visible(), last_opened_control);
+	} else {
+		// Open the first panel in the list if no panel was opened this session.
+		_switch_to_item(true, 0);
+	}
+}
+
 EditorBottomPanel::EditorBottomPanel() {
 	item_vbox = memnew(VBoxContainer);
 	add_child(item_vbox);
@@ -235,27 +253,11 @@ EditorBottomPanel::EditorBottomPanel() {
 	editor_toaster = memnew(EditorToaster);
 	bottom_hbox->add_child(editor_toaster);
 
-	VBoxContainer *version_info_vbox = memnew(VBoxContainer);
-	bottom_hbox->add_child(version_info_vbox);
-
-	// Add a dummy control node for vertical spacing.
-	Control *v_spacer = memnew(Control);
-	version_info_vbox->add_child(v_spacer);
-
-	version_btn = memnew(LinkButton);
-	version_btn->set_text(VERSION_FULL_CONFIG);
-	String hash = String(VERSION_HASH);
-	if (hash.length() != 0) {
-		hash = " " + vformat("[%s]", hash.left(9));
-	}
-	// Set the text to copy in metadata as it slightly differs from the button's text.
-	version_btn->set_meta(META_TEXT_TO_COPY, "v" VERSION_FULL_BUILD + hash);
+	EditorVersionButton *version_btn = memnew(EditorVersionButton(EditorVersionButton::FORMAT_BASIC));
 	// Fade out the version label to be less prominent, but still readable.
 	version_btn->set_self_modulate(Color(1, 1, 1, 0.65));
-	version_btn->set_underline_mode(LinkButton::UNDERLINE_MODE_ON_HOVER);
-	version_btn->set_tooltip_text(TTR("Click to copy."));
-	version_btn->connect("pressed", callable_mp(this, &EditorBottomPanel::_version_button_pressed));
-	version_info_vbox->add_child(version_btn);
+	version_btn->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
+	bottom_hbox->add_child(version_btn);
 
 	// Add a dummy control node for horizontal spacing.
 	Control *h_spacer = memnew(Control);
@@ -268,5 +270,5 @@ EditorBottomPanel::EditorBottomPanel() {
 	expand_button->set_theme_type_variation("FlatMenuButton");
 	expand_button->set_toggle_mode(true);
 	expand_button->set_shortcut(ED_SHORTCUT_AND_COMMAND("editor/bottom_panel_expand", TTR("Expand Bottom Panel"), KeyModifierMask::SHIFT | Key::F12));
-	expand_button->connect("toggled", callable_mp(this, &EditorBottomPanel::_expand_button_toggled));
+	expand_button->connect(SceneStringName(toggled), callable_mp(this, &EditorBottomPanel::_expand_button_toggled));
 }
