@@ -1144,11 +1144,25 @@ PackedStringArray CanvasItem::get_configuration_warnings() const {
 	PackedStringArray warnings = Node::get_configuration_warnings();
 
 	if (clip_children_mode != CLIP_CHILDREN_DISABLED && is_inside_tree()) {
+		bool warned_about_ancestor_clipping = false;
+		bool warned_about_canvasgroup_ancestor = false;
 		Node *n = get_parent();
 		while (n) {
 			CanvasItem *as_canvas_item = Object::cast_to<CanvasItem>(n);
 			if (as_canvas_item && as_canvas_item->clip_children_mode != CLIP_CHILDREN_DISABLED) {
 				warnings.push_back(RTR("An ancestor of this node clips its children, so this node will not be able to clip its children."));
+				warned_about_ancestor_clipping = true;
+			}
+
+			CanvasGroup *as_canvas_group = Object::cast_to<CanvasGroup>(n);
+			if (as_canvas_group) {
+				warnings.push_back(RTR("An ancestor of this node is a CanvasGroup, so this node will not be able to clip its children."));
+				warned_about_canvasgroup_ancestor = true;
+			}
+
+			// Only break out early once both warnings have been triggered, so
+			// that the user is aware of both possible reasons for clipping not working.
+			if (warned_about_ancestor_clipping && warned_about_canvasgroup_ancestor) {
 				break;
 			}
 			n = n->get_parent();
