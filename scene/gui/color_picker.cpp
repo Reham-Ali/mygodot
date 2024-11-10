@@ -743,6 +743,7 @@ void ColorPicker::set_picker_shape(PickerShapeType p_shape) {
 		btn_shape->set_button_icon(shape_popup->get_item_icon(p_shape));
 	}
 
+	hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 	current_shape = p_shape;
 
 #ifdef TOOLS_ENABLED
@@ -1427,7 +1428,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
 				v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
 			}
-			else if (actual_shape == SHAPE_VHS_CIRCLE) {
+			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				Vector2 center = c->get_size() / 2.0;
 
 				// TODO: It's a hack, as it messes up if I calculate it this way always
@@ -1522,7 +1523,7 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				h = CLAMP(h + color_change / modes[MODE_HSV]->get_slider_max(0), 0, 1);
 			}
-			else if (actual_shape == SHAPE_VHS_CIRCLE) {
+			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				v = CLAMP(v - color_change / modes[MODE_HSV]->get_slider_max(2), 0, 1);
 			}
 
