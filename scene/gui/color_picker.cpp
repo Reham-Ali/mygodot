@@ -391,6 +391,8 @@ void ColorPicker::_slider_value_changed() {
 		h = sliders[0]->get_value() / 360.0;
 		s = sliders[1]->get_value() / 100.0;
 		v = sliders[2]->get_value() / 100.0;
+
+		hsv_keyboard_picker_cursor_position = Vector2i(0,0);
 		last_color = color;
 	}
 
@@ -808,6 +810,7 @@ void ColorPicker::_set_mode_popup_value(ColorModeType p_mode) {
 	} else {
 		set_color_mode(p_mode);
 	}
+	hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 }
 
 Variant ColorPicker::_get_drag_data_fw(const Point2 &p_point, Control *p_from_control) {
@@ -1315,6 +1318,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 					real_t rad = center.angle_to_point(bev->get_position());
 					h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
 					s = CLAMP(dist / center.x, 0, 1);
+					hsv_keyboard_picker_cursor_position = Vector2i(0,0);
 				} else {
 					return;
 				}
@@ -1382,6 +1386,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			real_t rad = center.angle_to_point(mev->get_position());
 			h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
 			s = CLAMP(dist / center.x, 0, 1);
+			hsv_keyboard_picker_cursor_position = Vector2i(0,0);
 		} else {
 			if (spinning) {
 				real_t rad = center.angle_to_point(mev->get_position());
@@ -1421,6 +1426,25 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
 				v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
+			}
+			else if (actual_shape == SHAPE_VHS_CIRCLE) {
+				Vector2 center = c->get_size() / 2.0;
+
+				// TODO: It's a hack, as it messes up if I calculate it this way always
+				if (hsv_keyboard_picker_cursor_position.x == 0 && hsv_keyboard_picker_cursor_position.y == 0) {
+					hsv_keyboard_picker_cursor_position.x = center.x + (center.x * Math::cos(h * Math_TAU) * s);
+					hsv_keyboard_picker_cursor_position.y = center.y + (center.y * Math::sin(h * Math_TAU) * s);
+				}
+
+				real_t potential_new_cursor_distance = center.distance_to(hsv_keyboard_picker_cursor_position+color_change_vector);
+				if (potential_new_cursor_distance <= center.x) {
+					hsv_keyboard_picker_cursor_position += color_change_vector;
+				}
+
+				real_t dist = center.distance_to(hsv_keyboard_picker_cursor_position);
+				real_t rad = center.angle_to_point(hsv_keyboard_picker_cursor_position);
+				h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
+				s = CLAMP(dist / center.x, 0, 1);
 			}
 
 			accept_event();
@@ -1497,6 +1521,9 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 		if (!Math::is_zero_approx(color_change)) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				h = CLAMP(h + color_change / modes[MODE_HSV]->get_slider_max(0), 0, 1);
+			}
+			else if (actual_shape == SHAPE_VHS_CIRCLE) {
+				v = CLAMP(v - color_change / modes[MODE_HSV]->get_slider_max(2), 0, 1);
 			}
 
 			accept_event();
@@ -1703,6 +1730,7 @@ void ColorPicker::_html_focus_exit() {
 	} else {
 		_update_text_value();
 	}
+	hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 }
 
 void ColorPicker::set_can_add_swatches(bool p_enabled) {
@@ -1885,6 +1913,7 @@ ColorPicker::ColorPicker() {
 	hb_edit->set_v_size_flags(SIZE_SHRINK_BEGIN);
 
 	uv_edit = memnew(Control);
+	uv_edit->set_name("UV EDIT");
 	hb_edit->add_child(uv_edit);
 	uv_edit->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(uv_edit));
 	uv_edit->set_mouse_filter(MOUSE_FILTER_PASS);
@@ -2028,7 +2057,9 @@ ColorPicker::ColorPicker() {
 	wheel->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(2, wheel));
 
 	wheel_uv = memnew(Control);
+	wheel_uv->set_name("WHEEL UV");
 	wheel_margin->add_child(wheel_uv);
+	wheel_uv->set_focus_mode(FOCUS_ALL);
 	wheel_uv->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_uv));
 	wheel_uv->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(0, wheel_uv));
 
