@@ -86,12 +86,13 @@ TEST_CASE("[PackedScene] Test That Correct Signals are Preserved when Packing Sc
 		sub_scene_root->connect("ready", callable_mp(sub_scene_root, &Node::is_ready), main_flags);
 
 		// Pack the scene.
-		PackedScene packed_scene;
-		const Error err = packed_scene.pack(main_scene_root);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
+		const Error err = packed_scene->pack(main_scene_root);
 		CHECK(err == OK);
 
-		// Make sure the right connections are in packed scene
-		Ref<SceneState> state = packed_scene.get_state();
+		// Make sure the right connections are in packed scene.
+		Ref<SceneState> state = packed_scene->get_state();
 		CHECK_EQ(state->get_connection_count(), 3);
 	}
 
@@ -105,12 +106,13 @@ TEST_CASE("[PackedScene] Test That Correct Signals are Preserved when Packing Sc
 		sub_scene_root->connect("ready", callable_mp(sub_scene_root, &Node::is_ready), subscene_flags);
 
 		// Pack the scene.
-		PackedScene packed_scene;
-		const Error err = packed_scene.pack(main_scene_root);
+		Ref<PackedScene> packed_scene;
+		packed_scene.instantiate();
+		const Error err = packed_scene->pack(main_scene_root);
 		CHECK(err == OK);
 
-		// Make sure the right connections are in packed scene
-		Ref<SceneState> state = packed_scene.get_state();
+		// Make sure the right connections are in packed scene.
+		Ref<SceneState> state = packed_scene->get_state();
 		CHECK_EQ(state->get_connection_count(), 0);
 	}
 
