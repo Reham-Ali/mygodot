@@ -1133,6 +1133,7 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 	if (!c) {
 		return;
 	}
+	Rect2 focus_rect = Rect2(Point2(), c->get_size());
 
 	PickerShapeType actual_shape = _get_actual_shape();
 	if (p_which == 0) {
