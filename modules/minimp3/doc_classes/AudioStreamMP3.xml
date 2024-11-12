@@ -13,7 +13,7 @@
 			<return type="AudioStreamMP3" />
 			<param index="0" name="path" type="String" />
 			<description>
-				Creates a new AudioStreamMP3 instance from the given file path. The file must be in the MP3 format.
+				Creates a new [AudioStreamMP3] instance from the given file path. The file must be in the MP3 format.
 			</description>
 		</method>
 	</methods>
