@@ -532,10 +532,6 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 		p_theme->set_color("axis_w_color", EditorStringName(Editor), Color(0.55, 0.55, 0.55));
 
 		p_theme->set_color("constructor_hint_color", EditorStringName(Editor), Color(1, 0.549, 0));
-
-		p_theme->set_color("private_member_color", EditorStringName(Editor), Color(0.804, 0.361, 0.361));
-		p_theme->set_color("protected_member_color", EditorStringName(Editor), Color(1, 0.549, 0));
-
 		const float prop_color_saturation = p_config.accent_color.get_s() * 0.75;
 		const float prop_color_value = p_config.accent_color.get_v();
 
@@ -543,9 +539,6 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 		p_theme->set_color("property_color_y", EditorStringName(Editor), Color().from_hsv(1.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
 		p_theme->set_color("property_color_z", EditorStringName(Editor), Color().from_hsv(2.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
 		p_theme->set_color("property_color_w", EditorStringName(Editor), Color().from_hsv(1.5 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
-
-		p_theme->set_color("property_private_member", EditorStringName(Editor), Color().from_hsv(0.0, prop_color_saturation * 1.375, prop_color_value * 1.45));
-		p_theme->set_color("property_protected_member", EditorStringName(Editor), Color().from_hsv(0.0833, prop_color_saturation * 1.5, prop_color_value * 1.325));
 
 		// Special colors for rendering methods.
 

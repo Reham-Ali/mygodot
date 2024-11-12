@@ -337,7 +337,20 @@ void GDScriptAnalyzer::push_warning_for_unused_private_protected_members(const G
 }
 
 void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *p_identifier, const bool p_is_call) {
-	if (p_identifier == nullptr || p_identifier->name.is_empty()) {
+	if (p_identifier == nullptr) {
+		return;
+	}
+	switch (p_identifier->source) {
+		case GDScriptParser::IdentifierNode::LOCAL_CONSTANT:
+		case GDScriptParser::IdentifierNode::LOCAL_VARIABLE:
+		case GDScriptParser::IdentifierNode::LOCAL_ITERATOR:
+		case GDScriptParser::IdentifierNode::LOCAL_BIND:
+		case GDScriptParser::IdentifierNode::FUNCTION_PARAMETER:
+			return;
+		default:
+			break;
+	}
+	if (p_identifier->name.is_empty()) {
 		return;
 	}
 	if (parser->current_class == nullptr) {
