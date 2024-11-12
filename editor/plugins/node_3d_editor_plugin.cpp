@@ -2374,7 +2374,7 @@ void Node3DEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 		}
 		if (ED_IS_SHORTCUT("spatial_editor/create_cam_from_view", p_event)) {
 			Ref<InputEventKey> key = p_event;
-			if(key->is_released()) {
+			if (key->is_released()) {
 				_menu_option(VIEW_CREATE_CAM);
 			}
 		}
@@ -5382,7 +5382,7 @@ void Node3DEditorViewport::_set_lock_view_rotation(bool p_lock_rotation) {
 
 void Node3DEditorViewport::_create_cam_from_view() {
 	const List<Node *> &selection = editor_selection->get_selected_node_list();
-	if(selection.size() > 1) {
+	if (selection.size() > 1) {
 		return;
 	}
 	Node *base = get_tree()->get_edited_scene_root();
@@ -5404,7 +5404,7 @@ void Node3DEditorViewport::_create_cam_from_view() {
 		// Fix from @ydeltastar PR #99099
 		Vector3 offset = camera_transform.basis.xform(Vector3(0, 0, cursor.distance));
 		xform.origin = cursor.pos + offset;
-	}else {
+	} else {
 		new_cam->set_fov(camera->get_fov());
 		new_cam->set_near(camera->get_near());
 		new_cam->set_far(camera->get_far());
@@ -5413,17 +5413,17 @@ void Node3DEditorViewport::_create_cam_from_view() {
 	}
 	// Check if any nodes is selected
 	bool is_selected = false;
-	if(selection.size() == 1) {
+	if (selection.size() == 1) {
 		is_selected = true;
 	}
-	
+
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Add Camera to Scene"));
-	if(!is_selected) {
+	if (!is_selected) {
 		undo_redo->add_do_method(base, "add_child", new_cam, true);
 		undo_redo->add_do_method(new_cam, "set_owner", base);
 		undo_redo->add_undo_method(base, "remove_child", new_cam);
-	}else {
+	} else {
 		Node *sp = Object::cast_to<Node>(selection.front()->get());
 		if (!sp) {
 			return;
