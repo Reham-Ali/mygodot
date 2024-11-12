@@ -1,0 +1,17 @@
+GDTEST_OK
+>> WARNING
+>> Line: 17
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "_a" in an external class.
+>> WARNING
+>> Line: 19
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "_a" in an external class.
+>> WARNING
+>> Line: 20
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "_b" in an external class.
+>> WARNING
+>> Line: 22
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "_b" in an external class.

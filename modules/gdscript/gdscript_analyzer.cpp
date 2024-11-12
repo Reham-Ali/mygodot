@@ -3528,7 +3528,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 
 #ifdef DEBUG_ENABLED
 		GDScriptParser::IdentifierNode *identifier = static_cast<GDScriptParser::IdentifierNode *>(p_call->callee);
-		check_identifier_private(identifier);
+		check_identifier_private(identifier, true);
 #endif
 	} else if (callee_type == GDScriptParser::Node::IDENTIFIER) {
 		base_type = parser->current_class->get_datatype();
@@ -3536,7 +3536,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 		is_self = true;
 #ifdef DEBUG_ENABLED
 		GDScriptParser::IdentifierNode *identifier = static_cast<GDScriptParser::IdentifierNode *>(p_call->callee);
-		check_identifier_private(identifier);
+		check_identifier_private(identifier, true);
 #endif
 	} else if (callee_type == GDScriptParser::Node::SUBSCRIPT) {
 		GDScriptParser::SubscriptNode *subscript = static_cast<GDScriptParser::SubscriptNode *>(p_call->callee);
@@ -3572,7 +3572,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 			is_self = subscript->base->type == GDScriptParser::Node::SELF;
 		}
 #ifdef DEBUG_ENABLED
-		check_identifier_private(subscript->attribute);
+		check_identifier_private(subscript->attribute, true);
 #endif
 	} else {
 		// Invalid call. Error already sent in parser.

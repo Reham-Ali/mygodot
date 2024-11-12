@@ -50,7 +50,8 @@ public:
 		UNASSIGNED_VARIABLE_OP_ASSIGN, // Variable never assigned but used in an assignment operation (+=, *=, etc).
 		UNUSED_VARIABLE, // Local variable is declared but never used.
 		UNUSED_LOCAL_CONSTANT, // Local constant is declared but never used.
-		UNUSED_PRIVATE_CLASS_VARIABLE, // Class variable is declared private ("_" prefix) but never used in the class.
+		UNUSED_PRIVATE_CLASS_VARIABLE, // Class variable is declared private ("__" prefix) but never used in the class.
+		UNUSED_PROTECTED_CLASS_VARIABLE, // Class variable is declared protected ("_" prefix) but never used in the class.
 		UNUSED_PARAMETER, // Function parameter is never used.
 		UNUSED_SIGNAL, // Signal is defined but never explicitly used in the class.
 		SHADOWED_VARIABLE, // A local variable/constant shadows a current class member.
@@ -107,6 +108,7 @@ public:
 		WARN, // UNUSED_VARIABLE
 		WARN, // UNUSED_LOCAL_CONSTANT
 		WARN, // UNUSED_PRIVATE_CLASS_VARIABLE
+		WARN, // UNUSED_PROTECTED_CLASS_VARIABLE
 		WARN, // UNUSED_PARAMETER
 		WARN, // UNUSED_SIGNAL
 		WARN, // SHADOWED_VARIABLE

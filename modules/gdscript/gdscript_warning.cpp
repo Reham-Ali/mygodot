@@ -52,7 +52,10 @@ String GDScriptWarning::get_message() const {
 			return vformat(R"(The local constant "%s" is declared but never used in the block. If this is intended, prefix it with an underscore: "_%s".)", symbols[0], symbols[0]);
 		case UNUSED_PRIVATE_CLASS_VARIABLE:
 			CHECK_SYMBOLS(1);
-			return vformat(R"(The class variable "%s" is declared but never used in the class.)", symbols[0]);
+			return vformat(R"(The class variable "%s" that is private is declared but never used in the class.)", symbols[0]);
+		case UNUSED_PROTECTED_CLASS_VARIABLE:
+			CHECK_SYMBOLS(1);
+			return vformat(R"(The class variable "%s" that is protected is declared but never used in the class.)", symbols[0]);
 		case UNUSED_PARAMETER:
 			CHECK_SYMBOLS(2);
 			return vformat(R"*(The parameter "%s" is never used in the function "%s()". If this is intended, prefix it with an underscore: "_%s".)*", symbols[1], symbols[0], symbols[1]);
@@ -211,6 +214,7 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"UNUSED_VARIABLE",
 		"UNUSED_LOCAL_CONSTANT",
 		"UNUSED_PRIVATE_CLASS_VARIABLE",
+		"UNUSED_PROTECTED_CLASS_VARIABLE",
 		"UNUSED_PARAMETER",
 		"UNUSED_SIGNAL",
 		"SHADOWED_VARIABLE",

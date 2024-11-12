@@ -1,0 +1,49 @@
+GDTEST_OK
+>> WARNING
+>> Line: 14
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "__a" in an external class.
+>> WARNING
+>> Line: 18
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "__a" in an external class.
+>> WARNING
+>> Line: 20
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "__b" in an external class.
+>> WARNING
+>> Line: 24
+>> ACCESSING_PRIVATE_MEMBER
+>> Trying accessing a private member "__b" in an external class.
+>> WARNING
+>> Line: 27
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__c()" in an external class.
+>> WARNING
+>> Line: 31
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__c()" in an external class.
+>> WARNING
+>> Line: 33
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__d()" in an external class.
+>> WARNING
+>> Line: 37
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__d()" in an external class.
+>> WARNING
+>> Line: 39
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__c()" in an external class.
+>> WARNING
+>> Line: 43
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__c()" in an external class.
+>> WARNING
+>> Line: 45
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__d()" in an external class.
+>> WARNING
+>> Line: 49
+>> CALLING_PRIVATE_METHOD
+>> Trying calling a private method "__d()" in an external class.
