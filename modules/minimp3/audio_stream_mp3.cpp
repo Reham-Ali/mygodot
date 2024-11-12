@@ -321,6 +321,7 @@ Ref<AudioStreamMP3> AudioStreamMP3::load_from_file(const String &p_path) {
 
 void AudioStreamMP3::_bind_methods() {
 	ClassDB::bind_static_method("AudioStreamMP3", D_METHOD("load_from_file", "path"), &AudioStreamMP3::load_from_file);
+	
 	ClassDB::bind_method(D_METHOD("set_data", "data"), &AudioStreamMP3::set_data);
 	ClassDB::bind_method(D_METHOD("get_data"), &AudioStreamMP3::get_data);
 
