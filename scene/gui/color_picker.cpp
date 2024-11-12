@@ -1444,7 +1444,19 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 
 		// TODO: It should be done in process instead of input to handle joypads better
 		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
-		Vector2 color_change_vector = Input::get_singleton()->get_vector("ui_left", "ui_right", "ui_up", "ui_down");
+		// Vector2 color_change_vector = Input::get_singleton()->get_vector("ui_left", "ui_right", "ui_up", "ui_down");
+		Vector2 color_change_vector = Vector2();
+		if (p_event->is_action_pressed("ui_left", true)) {
+			color_change_vector.x -= 1;
+		} else if (p_event->is_action_pressed("ui_right", true)) {
+			color_change_vector.x += 1;
+		} else if (p_event->is_action_pressed("ui_up", true)) {
+			color_change_vector.y -= 1;
+		} else if (p_event->is_action_pressed("ui_down", true)) {
+			color_change_vector.y += 1;
+		}
+
+
 		if (!Math::is_zero_approx(color_change_vector.length())) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
