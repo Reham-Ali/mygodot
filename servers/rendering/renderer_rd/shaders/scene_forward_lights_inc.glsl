@@ -418,9 +418,9 @@ void light_process_omni(uint idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 v
 		size = max(0.0, 1.0 - 1 / sqrt(1 + t * t));
 	}
 
+	float shadow = 1.0;
 #ifndef SHADOWS_DISABLED
 	// Omni light shadow.
-	float shadow = 1.0;
 	if (omni_attenuation > EPSILON && omni_lights.data[idx].shadow_opacity > 0.001) {
 		// there is a shadowmap
 		vec2 texel_size = scene_data_block.data.shadow_atlas_pixel_size;
@@ -722,9 +722,9 @@ void light_process_spot(uint idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 v
 		size = max(0.0, 1.0 - 1 / sqrt(1 + t * t));
 	}
 
+	float shadow = 1.0;
 #ifndef SHADOWS_DISABLED
 	// Spot light shadow.
-	float shadow = 1.0;
 	if (spot_attenuation > EPSILON && spot_lights.data[idx].shadow_opacity > 0.001) {
 		vec3 normal_bias = normal * light_length * spot_lights.data[idx].shadow_normal_bias * (1.0 - abs(dot(normal, light_rel_vec_norm)));
 
