@@ -175,7 +175,7 @@
 			The maximum amount of torque (angular force) that the motor can apply to angular velocity around the X axis. It is measured in Nm, or kg·m²/s² in SI base units.
 		</member>
 		<member name="angular_motor_x/target_velocity" type="float" setter="set_param_x" getter="get_param_x" default="0.0">
-			Target speed for the angular motor in radians per second around the X axis.
+			Target speed for the angular motor around the X axis, in radians per second.
 		</member>
 		<member name="angular_motor_y/enabled" type="bool" setter="set_flag_y" getter="get_flag_y" default="false">
 			If [code]true[/code], then there is an angular motor on the Y axis. More generally, the joint's rotation around the Y axis will have a joint drive that targets the given angular velocity and tries to reach it while staying within the force limits.
@@ -202,7 +202,7 @@
 			If [code]true[/code], then there is an angular spring on the X axis. More generally, the joint's rotation around the X axis will have a joint drive that targets the equilibrium point and attempts to move towards it with the given stiffness and damping values.
 		</member>
 		<member name="angular_spring_x/equilibrium_point" type="float" setter="set_param_x" getter="get_param_x" default="0.0">
-			The equilibrium point of the spring in radians around the X axis.
+			The equilibrium point of the spring around the X axis, in radians.
 		</member>
 		<member name="angular_spring_x/stiffness" type="float" setter="set_param_x" getter="get_param_x" default="0.0">
 			The stiffness of the spring around the X axis. It is measured in N·m/rad, or kg·m²/s²/rad in SI base units.
