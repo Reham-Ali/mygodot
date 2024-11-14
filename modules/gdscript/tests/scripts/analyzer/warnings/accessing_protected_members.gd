@@ -21,7 +21,7 @@ class B:
 
 		a._c()
 		A._d()
-	
+
 	var d = a._c()
 	var e = A._d()
 
@@ -38,7 +38,7 @@ class C extends A:
 
 		a._c()
 		A._d()
-	
+
 	var d = a._c()
 	var e = A._d()
 

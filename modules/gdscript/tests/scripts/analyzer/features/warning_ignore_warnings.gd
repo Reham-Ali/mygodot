@@ -163,7 +163,7 @@ class Accessee:
 		pass
 	static func __d():
 		pass
-	
+
 	@warning_ignore("unused_protected_class_variable")
 	var _e: int = 3
 	static var _f: int = 4
@@ -180,7 +180,7 @@ class B:
 	var b = a.__a
 	@warning_ignore("accessing_private_member")
 	var c = Accessee.__b
-	
+
 	func foo():
 		@warning_ignore("standalone_expression", "accessing_private_member")
 		a.__a
@@ -190,7 +190,7 @@ class B:
 		a.__c()
 		@warning_ignore("calling_private_method")
 		Accessee.__d()
-	
+
 	@warning_ignore("calling_private_method")
 	var d = a.__c()
 	@warning_ignore("calling_private_method")
@@ -200,7 +200,7 @@ class B:
 	var f = a._e
 	@warning_ignore("accessing_protected_member")
 	var g = Accessee._f
-	
+
 	func bar():
 		@warning_ignore("standalone_expression", "accessing_protected_member")
 		a._e
@@ -210,7 +210,7 @@ class B:
 		a._g()
 		@warning_ignore("calling_protected_method")
 		Accessee._h()
-	
+
 	@warning_ignore("calling_protected_method")
 	var h = a._g()
 	@warning_ignore("calling_protected_method")
@@ -221,7 +221,7 @@ class C extends Accessee:
 	var a = __a
 	@warning_ignore("accessing_private_member")
 	var b = Accessee.__b
-	
+
 	func foo():
 		@warning_ignore("standalone_expression", "accessing_private_member")
 		__a
@@ -231,7 +231,7 @@ class C extends Accessee:
 		__c()
 		@warning_ignore("calling_private_method")
 		Accessee.__d()
-	
+
 	@warning_ignore("calling_private_method")
 	var c = __c()
 	@warning_ignore("calling_private_method")
@@ -239,7 +239,7 @@ class C extends Accessee:
 
 	var e = _e
 	var f = Accessee._f
-	
+
 	func bar():
 		@warning_ignore("standalone_expression")
 		_e
@@ -247,7 +247,7 @@ class C extends Accessee:
 		Accessee._f
 		_g()
 		Accessee._h()
-	
+
 	var g = _g()
 	var h = Accessee._h()
 

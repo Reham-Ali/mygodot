@@ -344,7 +344,7 @@ void EditorProperty::_notification(int p_what) {
 				}
 				text_limit -= total_icon_w;
 			}
-			
+
 			String property_name = String(property);
 			if (property_name.begins_with("__")) {
 				color = get_theme_color(SNAME("property_private_member"), EditorStringName(Editor));
