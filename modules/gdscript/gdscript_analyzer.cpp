@@ -331,7 +331,7 @@ void GDScriptAnalyzer::push_warning_for_unused_private_protected_members(const G
 		if (member_name.begins_with("__")) {
 			parser->push_warning(p_assignable->identifier, GDScriptWarning::UNUSED_PRIVATE_CLASS_VARIABLE, p_assignable->identifier->name);
 		} else if (member_name.begins_with("_")) {
-			parser->push_warning(p_assignable->identifier, GDScriptWarning::UNUSED_PRIVATE_CLASS_VARIABLE, p_assignable->identifier->name);
+			parser->push_warning(p_assignable->identifier, GDScriptWarning::UNUSED_PROTECTED_CLASS_VARIABLE, p_assignable->identifier->name);
 		}
 	}
 }
