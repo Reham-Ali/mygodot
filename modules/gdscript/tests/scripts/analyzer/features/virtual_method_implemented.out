@@ -1,11 +1,3 @@
 GDTEST_OK
->> WARNING
->> Line: 19
->> CALLING_PRIVATE_METHOD
->> Trying calling a private method "_get_property_list()" in an external class.
->> WARNING
->> Line: 21
->> CALLING_PRIVATE_METHOD
->> Trying calling a private method "_get_property_list()" in an external class.
 { "property": "definition" }
 { "property": "definition", "new": "new" }

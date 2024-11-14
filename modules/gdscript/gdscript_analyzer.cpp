@@ -379,7 +379,8 @@ void GDScriptAnalyzer::check_identifier_private(GDScriptParser::IdentifierNode *
 	}
 	if (throw_warning) {
 		GDScriptWarning::Code private_warning = p_is_call ? GDScriptWarning::CALLING_PRIVATE_METHOD : GDScriptWarning::ACCESSING_PRIVATE_MEMBER;
-		parser->push_warning(p_identifier, private_warning, p_identifier->name);
+		GDScriptWarning::Code protected_warning = p_is_call ? GDScriptWarning::CALLING_PROTECTED_METHOD : GDScriptWarning::ACCESSING_PROTECTED_MEMBER;
+		parser->push_warning(p_identifier, marked_as_private ? private_warning : protected_warning, p_identifier->name);
 	}
 }
 #endif // DEBUG_ENABLED

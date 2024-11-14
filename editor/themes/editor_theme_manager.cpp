@@ -539,8 +539,8 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 		p_theme->set_color("property_color_z", EditorStringName(Editor), Color().from_hsv(2.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
 		p_theme->set_color("property_color_w", EditorStringName(Editor), Color().from_hsv(1.5 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
 
-		p_theme->set_color("property_private_member", EditorStringName(Editor), Color().from_hsv(1.25, prop_color_saturation * 0.5, prop_color_value * 0.25));
-		p_theme->set_color("property_protected_member", EditorStringName(Editor), Color().from_hsv(1.28, prop_color_saturation * 0.5, prop_color_value * 0.4));
+		p_theme->set_color("property_private_member", EditorStringName(Editor), Color().from_hsv(2.11 / 3.0 + 0.05, prop_color_saturation, prop_color_value * 0.5));
+		p_theme->set_color("property_protected_member", EditorStringName(Editor), Color().from_hsv(2.58 / 3.0 + 0.05, prop_color_saturation * 1.5, prop_color_value * 0.8));
 
 		// Special colors for rendering methods.
 

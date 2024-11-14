@@ -92,8 +92,10 @@ public:
 		NATIVE_METHOD_OVERRIDE, // The script method overrides a native one, this may not work as intended.
 		GET_NODE_DEFAULT_WITHOUT_ONREADY, // A class variable uses `get_node()` (or the `$` notation) as its default value, but does not use the @onready annotation.
 		ONREADY_WITH_EXPORT, // The `@onready` annotation will set the value after `@export` which is likely not intended.
-		ACCESSING_PRIVATE_MEMBER, // A member prefixed with `_` is being accessed, whether the member exists or not.
-		CALLING_PRIVATE_METHOD, // A method prefixed with `_` is being called, whether the method exists or not.
+		ACCESSING_PRIVATE_MEMBER, // A member prefixed with `__` is being accessed, whether the member exists or not.
+		CALLING_PRIVATE_METHOD, // A method prefixed with `__` is being called, whether the method exists or not.
+		ACCESSING_PROTECTED_MEMBER, // A member prefixed with `_` is being accessed, whether the member exists or not.
+		CALLING_PROTECTED_METHOD, // A method prefixed with `_` is being called, whether the method exists or not.
 #ifndef DISABLE_DEPRECATED
 		PROPERTY_USED_AS_FUNCTION, // Function not found, but there's a property with the same name.
 		CONSTANT_USED_AS_FUNCTION, // Function not found, but there's a constant with the same name.
@@ -151,6 +153,8 @@ public:
 		ERROR, // ONREADY_WITH_EXPORT // May not work as expected.
 		WARN, // ACCESSING_PRIVATE_MEMBER
 		WARN, // CALLING_PRIVATE_METHOD
+		WARN, // ACCESSING_PROTECTED_MEMBER
+		WARN, // CALLING_PROTECTED_METHOD
 #ifndef DISABLE_DEPRECATED
 		WARN, // PROPERTY_USED_AS_FUNCTION
 		WARN, // CONSTANT_USED_AS_FUNCTION

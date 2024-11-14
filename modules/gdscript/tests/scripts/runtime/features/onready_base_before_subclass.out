@@ -1,7 +1,3 @@
 GDTEST_OK
->> WARNING
->> Line: 17
->> CALLING_PRIVATE_METHOD
->> Trying calling a private method "_ready()" in an external class.
 a
 b
