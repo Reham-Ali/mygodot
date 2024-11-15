@@ -620,6 +620,17 @@ if env["scu_build"]:
 
     methods.set_scu_folders(scu_builders.generate_scu_files(max_includes_per_scu))
 
+env.using_clang = methods.using_clang(env)
+env.is_vanilla_clang = methods.is_vanilla_clang(env)
+env.using_gcc = methods.using_gcc(env)
+env.using_emcc = methods.using_emcc(env)
+
+# Enforce our minimal compiler version requirements
+env.compiler_version = methods.get_compiler_version(env)
+cc_version_major = env.compiler_version["major"]
+cc_version_minor = env.compiler_version["minor"]
+cc_version_metadata1 = env.compiler_version["metadata1"]
+
 # Must happen after the flags' definition, as configure is when most flags
 # are actually handled to change compile options, etc.
 detect.configure(env)
@@ -628,18 +639,12 @@ print(f'Building for platform "{env["platform"]}", architecture "{env["arch"]}",
 if env.dev_build:
     print("NOTE: Developer build, with debug optimization level and debug symbols (unless overridden).")
 
-# Enforce our minimal compiler version requirements
-cc_version = methods.get_compiler_version(env)
-cc_version_major = cc_version["major"]
-cc_version_minor = cc_version["minor"]
-cc_version_metadata1 = cc_version["metadata1"]
-
 if cc_version_major == -1:
     print_warning(
         "Couldn't detect compiler version, skipping version checks. "
         "Build may fail if the compiler doesn't support C++17 fully."
     )
-elif methods.using_gcc(env):
+elif env.using_gcc:
     if cc_version_major < 9:
         print_error(
             "Detected GCC version older than 9, which does not fully support "
@@ -659,11 +664,11 @@ elif methods.using_gcc(env):
     if env["debug_paths_relative"] and cc_version_major < 8:
         print_warning("GCC < 8 doesn't support -ffile-prefix-map, disabling `debug_paths_relative` option.")
         env["debug_paths_relative"] = False
-elif methods.using_clang(env):
+elif env.using_clang:
     # Apple LLVM versions differ from upstream LLVM version \o/, compare
     # in https://en.wikipedia.org/wiki/Xcode#Toolchain_versions
     if env["platform"] == "macos" or env["platform"] == "ios":
-        vanilla = methods.is_vanilla_clang(env)
+        vanilla = env.is_vanilla_clang
         if vanilla and cc_version_major < 6:
             print_error(
                 "Detected Clang version older than 6, which does not fully support "
@@ -738,7 +743,7 @@ else:
         # Adding dwarf-4 explicitly makes stacktraces work with clang builds,
         # otherwise addr2line doesn't understand them
         env.Append(CCFLAGS=["-gdwarf-4"])
-        if methods.using_emcc(env):
+        if env.using_emcc:
             # Emscripten only produces dwarf symbols when using "-g3".
             env.Append(CCFLAGS=["-g3"])
             # Emscripten linker needs debug symbols options too.
@@ -753,7 +758,7 @@ else:
             project_path = Dir("#").abspath
             env.Append(CCFLAGS=[f"-ffile-prefix-map={project_path}=."])
     else:
-        if methods.using_clang(env) and not methods.is_vanilla_clang(env):
+        if env.using_clang and not env.is_vanilla_clang:
             # Apple Clang, its linker doesn't like -s.
             env.Append(LINKFLAGS=["-Wl,-S", "-Wl,-x", "-Wl,-dead_strip"])
         else:
@@ -818,7 +823,7 @@ elif env.msvc:
     env.Append(CXXFLAGS=["/EHsc"])
 
 # Configure compiler warnings
-if env.msvc and not methods.using_clang(env):  # MSVC
+if env.msvc and not env.using_clang:  # MSVC
     if env["warnings"] == "no":
         env.Append(CCFLAGS=["/w"])
     else:
@@ -853,7 +858,7 @@ if env.msvc and not methods.using_clang(env):  # MSVC
 else:  # GCC, Clang
     common_warnings = []
 
-    if methods.using_gcc(env):
+    if env.using_gcc:
         common_warnings += ["-Wshadow", "-Wno-misleading-indentation"]
         if cc_version_major == 7:  # Bogus warning fixed in 8+.
             common_warnings += ["-Wno-strict-overflow"]
@@ -863,7 +868,7 @@ else:  # GCC, Clang
             common_warnings += ["-Wno-type-limits"]
         if cc_version_major >= 12:  # False positives in our error macros, see GH-58747.
             common_warnings += ["-Wno-return-type"]
-    elif methods.using_clang(env) or methods.using_emcc(env):
+    elif env.using_clang or env.using_emcc:
         common_warnings += ["-Wshadow-field-in-constructor", "-Wshadow-uncaptured-local"]
         # We often implement `operator<` for structs of pointers as a requirement
         # for putting them in `Set` or `Map`. We don't mind about unreliable ordering.
@@ -875,7 +880,7 @@ else:  # GCC, Clang
     if env["warnings"] == "extra":
         env.Append(CCFLAGS=[W_ALL, "-Wextra", "-Wwrite-strings", "-Wno-unused-parameter"] + common_warnings)
         env.Append(CXXFLAGS=["-Wctor-dtor-privacy", "-Wnon-virtual-dtor"])
-        if methods.using_gcc(env):
+        if env.using_gcc:
             env.Append(
                 CCFLAGS=[
                     "-Walloc-zero",
@@ -892,7 +897,7 @@ else:  # GCC, Clang
                 env.Append(CCFLAGS=["-Wattribute-alias=2"])
             if cc_version_major >= 11:  # Broke on MethodBind templates before GCC 11.
                 env.Append(CCFLAGS=["-Wlogical-op"])
-        elif methods.using_clang(env) or methods.using_emcc(env):
+        elif env.using_clang or env.using_emcc:
             env.Append(CCFLAGS=["-Wimplicit-fallthrough"])
     elif env["warnings"] == "all":
         env.Append(CCFLAGS=[W_ALL] + common_warnings)

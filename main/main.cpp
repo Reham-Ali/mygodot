@@ -30,6 +30,7 @@
 
 #include "main.h"
 
+#include "core/buildsystem.gen.h"
 #include "core/config/project_settings.h"
 #include "core/core_globals.h"
 #include "core/crypto/crypto.h"
@@ -735,6 +736,15 @@ Error Main::test_setup() {
 	// From `Main::setup2()`.
 	initialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	register_core_extensions();
+
+	if (OS::get_singleton()->is_stdout_verbose()) {
+		print_line(vformat("Compiled on %s with %s %s, optimization: %s, LTO: %s",
+				String(BUILDSYSTEM_OS_NAME),
+				String(BUILDSYSTEM_COMPILER_NAME),
+				String(BUILDSYSTEM_COMPILER_VERSION),
+				String(BUILDSYSTEM_OPTIMIZATION_TYPE),
+				String(BUILDSYSTEM_OPTIMIZATION_LTO)));
+	}
 
 	register_core_singletons();
 
