@@ -1297,9 +1297,8 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 	}
 
 	if (c->has_focus()) {
-		// TODO: Add and use theme focus style for those controls
-		Color focus_color = Color::from_string("#FFFFFF", color);
-		c->draw_rect(focus_rect, focus_color, false);
+		RID ci = c->get_canvas_item();
+		theme_cache.picker_focus->draw(ci, focus_rect);
 	}
 }
 
@@ -1944,6 +1943,8 @@ void ColorPicker::_bind_methods() {
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, ColorPicker, h_width);
 
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, ColorPicker, center_slider_grabbers);
+
+	BIND_THEME_ITEM(Theme::DATA_TYPE_STYLEBOX, ColorPicker, picker_focus);
 
 	BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, ColorPicker, screen_picker);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_ICON, ColorPicker, expanded_arrow);
