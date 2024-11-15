@@ -743,6 +743,12 @@ void ColorPicker::set_picker_shape(PickerShapeType p_shape) {
 		btn_shape->set_button_icon(shape_popup->get_item_icon(p_shape));
 	}
 
+	if (p_shape == SHAPE_HSV_WHEEL) {
+		wheel_margin->set_focus_mode(FOCUS_ALL);
+	} else {
+		wheel_margin->set_focus_mode(FOCUS_NONE);
+	}
+
 	hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 	current_shape = p_shape;
 
@@ -1215,7 +1221,7 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 			Size2 real_size(c->get_size().x - corner_x * 2, c->get_size().y - corner_y * 2);
 			x = CLAMP(real_size.x * s, 0, real_size.x) + corner_x - (theme_cache.picker_cursor->get_width() / 2);
 			y = CLAMP(real_size.y - real_size.y * v, 0, real_size.y) + corner_y - (theme_cache.picker_cursor->get_height() / 2);
-			if (hsv_wheel_focused_part_index == 1) {
+			if (c == wheel_uv) {
 				focus_rect = Rect2(Point2(corner_x, corner_y), real_size);
 			}
 		}
@@ -1294,6 +1300,10 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 		if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 			circle_mat->set_shader_parameter("v", v);
 		}
+	} else if (p_which == 3) {
+		int margin = c->get_theme_constant("margin_bottom");
+		focus_rect.set_position(Vector2(-margin, -margin));
+		focus_rect.set_size(Vector2(focus_rect.get_size().x+margin*2, focus_rect.get_size().y+margin));
 	}
 
 	if (c->has_focus()) {
@@ -1329,13 +1339,12 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				real_t corner_x = (c == wheel_uv) ? center.x - Math_SQRT12 * c->get_size().width * 0.42 : 0;
 				real_t corner_y = (c == wheel_uv) ? center.y - Math_SQRT12 * c->get_size().height * 0.42 : 0;
 				Size2 real_size(c->get_size().x - corner_x * 2, c->get_size().y - corner_y * 2);
-				hsv_wheel_focused_part_index = 1;
 
 				if (bev->get_position().x < corner_x || bev->get_position().x > c->get_size().x - corner_x ||
 						bev->get_position().y < corner_y || bev->get_position().y > c->get_size().y - corner_y) {
 					{
 						real_t dist = center.distance_to(bev->get_position());
-						hsv_wheel_focused_part_index = 0;
+						wheel_margin->grab_focus();
 						if (dist >= center.x * 0.84 && dist <= center.x) {
 							real_t rad = center.angle_to_point(bev->get_position());
 							h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
@@ -1423,24 +1432,6 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 	Ref<InputEventJoypadMotion> jmev = p_event;
 
 	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
-		if (actual_shape == SHAPE_HSV_WHEEL) {
-			// TODO: Think about better way of handling this - hack because I cannot draw focus rect around wheel control
-			if (p_event->is_action_pressed("ui_focus_next") && hsv_wheel_focused_part_index == 0) {
-				hsv_wheel_focused_part_index = 1;
-
-				wheel_uv->queue_redraw();
-				accept_event();
-				return;
-			} else if (p_event->is_action_pressed("ui_focus_prev") && hsv_wheel_focused_part_index == 1) {
-				hsv_wheel_focused_part_index = 0;
-				wheel_uv->queue_redraw();
-				accept_event();
-				return;
-			} else if (p_event->is_action_pressed("ui_focus_next")) {
-				hsv_wheel_focused_part_index = 0;
-			}
-		}
-
 		// TODO: It should be done in process instead of input to handle joypads better
 		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
 		// Vector2 color_change_vector = Input::get_singleton()->get_vector("ui_left", "ui_right", "ui_up", "ui_down");
@@ -1481,10 +1472,10 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				s = CLAMP(dist / center.x, 0, 1);
 			}
 			else if (actual_shape == SHAPE_HSV_WHEEL) {
-				if (hsv_wheel_focused_part_index == 1) {
+				if (c == wheel_uv) {
 					s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
 					v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
-				} else if (hsv_wheel_focused_part_index == 0) {
+				} else if (c == wheel_margin) {
 					int h_change = 0;
 
 					if (Math::is_equal_approx(h, 0) || Math::is_equal_approx(h, 0.5f) || Math::is_equal_approx(h, 1)) {
@@ -2117,6 +2108,8 @@ ColorPicker::ColorPicker() {
 	wheel_margin = memnew(MarginContainer);
 	wheel_margin->add_theme_constant_override("margin_bottom", 8);
 	wheel_edit->add_child(wheel_margin);
+	// TODO: Hack - I cannot draw focus stylebox on wheel itself, as it's drawing based on shader
+	wheel_margin->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(3, wheel_margin));
 
 	wheel = memnew(Control);
 	wheel_margin->add_child(wheel);
