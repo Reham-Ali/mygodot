@@ -2129,6 +2129,7 @@ ColorPicker::ColorPicker() {
 	wheel_edit->add_child(wheel_margin);
 	// TODO: Hack - I cannot draw focus stylebox on wheel itself, as it's drawing based on shader
 	wheel_margin->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(3, wheel_margin));
+	wheel_margin->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_margin));
 
 	wheel = memnew(Control);
 	wheel_margin->add_child(wheel);
