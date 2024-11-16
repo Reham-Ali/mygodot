@@ -248,6 +248,25 @@ void ColorPicker::set_focus_on_line_edit() {
 	callable_mp((Control *)c_text, &Control::grab_focus).call_deferred();
 }
 
+void ColorPicker::set_focus_on_picker_shape() {
+	switch (_get_actual_shape()) {
+		case SHAPE_HSV_RECTANGLE:
+			callable_mp(uv_edit, &Control::grab_focus).call_deferred();
+		break;
+		case SHAPE_HSV_WHEEL:
+			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
+		break;
+		case SHAPE_VHS_CIRCLE:
+			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
+		break;
+		case SHAPE_OKHSL_CIRCLE:
+			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
+		break;
+		default: {
+		}
+	}
+}
+
 void ColorPicker::_update_controls() {
 	int mode_sliders_count = modes[current_mode]->get_slider_count();
 
@@ -2256,7 +2275,9 @@ void ColorPickerButton::pressed() {
 	float v_offset = show_above ? -minsize.y : get_size().y;
 	popup->set_position(get_screen_position() + Vector2(h_offset, v_offset));
 	popup->popup();
-	if (DisplayServer::get_singleton()->has_hardware_keyboard()) {
+	if (!picker->is_hex_visible() && picker->get_picker_shape() != ColorPicker::SHAPE_NONE) {
+		picker->set_focus_on_picker_shape();
+	} else if (DisplayServer::get_singleton()->has_hardware_keyboard()) {
 		picker->set_focus_on_line_edit();
 	}
 }

@@ -371,6 +371,7 @@ public:
 	bool is_hex_visible() const;
 
 	void set_focus_on_line_edit();
+	void set_focus_on_picker_shape();
 
 	ColorPicker();
 	~ColorPicker();
