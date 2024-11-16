@@ -282,13 +282,25 @@ void ColorPicker::_update_controls() {
 
 	switch (_get_actual_shape()) {
 		case SHAPE_HSV_RECTANGLE:
-			wheel_edit->hide();
 			w_edit->show();
 			uv_edit->show();
 			btn_shape->show();
+			if (wheel_uv->has_focus()) {
+				uv_edit->grab_focus();
+			} else if (wheel_margin->has_focus()) {
+				w_edit->grab_focus();
+			}
+			wheel_edit->hide();
+			wheel_margin->set_focus_mode(FOCUS_NONE);
 			break;
 		case SHAPE_HSV_WHEEL:
 			wheel_edit->show();
+			wheel_margin->set_focus_mode(FOCUS_ALL);
+			if (w_edit->has_focus()) {
+				wheel_margin->grab_focus();
+			} else if (uv_edit->has_focus()) {
+				wheel_uv->grab_focus();
+			}
 			w_edit->hide();
 			uv_edit->hide();
 			btn_shape->show();
@@ -297,20 +309,33 @@ void ColorPicker::_update_controls() {
 		case SHAPE_VHS_CIRCLE:
 			wheel_edit->show();
 			w_edit->show();
+			if (uv_edit->has_focus()) {
+				wheel_uv->grab_focus();
+			} else if (wheel_margin->has_focus()) {
+				w_edit->grab_focus();
+			}
 			uv_edit->hide();
 			btn_shape->show();
 			wheel->set_material(circle_mat);
 			circle_mat->set_shader(circle_shader);
+			wheel_margin->set_focus_mode(FOCUS_NONE);
 			break;
 		case SHAPE_OKHSL_CIRCLE:
 			wheel_edit->show();
 			w_edit->show();
+			if (uv_edit->has_focus()) {
+				wheel_uv->grab_focus();
+			} else if (wheel_margin->has_focus()) {
+				w_edit->grab_focus();
+			}
 			uv_edit->hide();
 			btn_shape->show();
 			wheel->set_material(circle_mat);
 			circle_mat->set_shader(circle_ok_color_shader);
+			wheel_margin->set_focus_mode(FOCUS_NONE);
 			break;
 		case SHAPE_NONE:
+			wheel_margin->set_focus_mode(FOCUS_NONE);
 			wheel_edit->hide();
 			w_edit->hide();
 			uv_edit->hide();
@@ -741,12 +766,6 @@ void ColorPicker::set_picker_shape(PickerShapeType p_shape) {
 	if (p_shape != SHAPE_NONE) {
 		shape_popup->set_item_checked(p_shape, true);
 		btn_shape->set_button_icon(shape_popup->get_item_icon(p_shape));
-	}
-
-	if (p_shape == SHAPE_HSV_WHEEL) {
-		wheel_margin->set_focus_mode(FOCUS_ALL);
-	} else {
-		wheel_margin->set_focus_mode(FOCUS_NONE);
 	}
 
 	hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
