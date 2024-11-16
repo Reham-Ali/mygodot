@@ -35,6 +35,7 @@
 
 #ifdef TOOLS_ENABLED
 
+#include "core/io/file_access_memory.h"
 #include "core/os/os.h"
 #include "drivers/png/image_loader_png.h"
 #include "editor/editor_resource_preview.h"
@@ -120,21 +121,22 @@ static Node *gltf_export_then_import(Node *p_root, String test_name) {
 	Error err = doc->append_from_scene(p_root, state, EditorSceneFormatImporter::IMPORT_USE_NAMED_SKIN_BINDS);
 	CHECK_MESSAGE(err == OK, "GLTF state generation failed.");
 
-	err = doc->write_to_filesystem(state, tempfile + ".gltf");
+	String resource = "res://" + test_name + ".gltf";
+
+	err = doc->write_to_filesystem(state, resource);
 	CHECK_MESSAGE(err == OK, "Writing GLTF to cache dir failed.");
 
-	return gltf_import(tempfile + ".gltf");
+	return gltf_import(resource);
 }
 
 void init(const String &p_test, bool copy = false) {
 	Error err;
 
-	// Setup project settings since it's needed for the import process
-	String project_folder = TestUtils::get_temp_path(p_test.get_file().get_basename());
-	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-	da->make_dir_recursive(project_folder.path_join(".godot").path_join("imported"));
-	// Initialize res:// to `project_folder`
-	TestProjectSettingsInternalsAccessor::resource_path() = project_folder;
+	// Initialize res:// to test folder.
+	TestProjectSettingsInternalsAccessor::resource_path() = TestUtils::get_temp_path("");
+
+	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	da->make_dir_recursive("res://.godot/imported");
 
 	if (!copy) {
 		return;

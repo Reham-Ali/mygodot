@@ -64,7 +64,7 @@ Ref<Texture2D> _check_texture(Node *node) {
 	return texture;
 }
 
-TEST_CASE("[SceneTree][Node] Export GLTF with external texture and import") {
+TEST_CASE("[SceneTree][Node][FileAccessMemory] Export GLTF with external texture and import") {
 	init("gltf_images_external_export_import");
 	// Setup scene.
 	Ref<ImageTexture> original_texture = memnew(ImageTexture);
@@ -106,7 +106,7 @@ TEST_CASE("[SceneTree][Node] Export GLTF with external texture and import") {
 	memdelete(loaded);
 }
 
-TEST_CASE("[SceneTree][Node][Editor] Import GLTF with embedded texture, check how it got extracted") {
+TEST_CASE("[SceneTree][Node][Editor][FileAccessMemory] Import GLTF with embedded texture, check how it got extracted") {
 	init("gltf_embedded_texture", true);
 
 	EditorFileSystem *efs = memnew(EditorFileSystem);
