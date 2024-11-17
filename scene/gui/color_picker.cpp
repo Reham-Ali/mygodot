@@ -1474,9 +1474,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 	Ref<InputEventJoypadMotion> jmev = p_event;
 
 	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
-		// TODO: It should be done in process instead of input to handle joypads better
 		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
-		// Vector2 color_change_vector = Input::get_singleton()->get_vector("ui_left", "ui_right", "ui_up", "ui_down");
 		Vector2 color_change_vector = Vector2();
 		if (p_event->is_action_pressed("ui_left", true)) {
 			color_change_vector.x -= 1;
@@ -1491,8 +1489,8 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 
 		if (!Math::is_zero_approx(color_change_vector.length())) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
-				s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
-				v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
+				s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
+				v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
 			}
 			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				Vector2 center = c->get_size() / 2.0;
@@ -1515,8 +1513,8 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			}
 			else if (actual_shape == SHAPE_HSV_WHEEL) {
 				if (c == wheel_uv) {
-					s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
-					v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
+					s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
+					v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
 				} else if (c == wheel_h_focus_display) {
 					int h_change = 0;
 
@@ -1539,9 +1537,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 					}
 
 					h_change = CLAMP(h_change, -1, 1);
-					// int tmp = ((h * 360) + h_change) % 360;
-					// h = tmp / 360.0;
-					h = Math::wrapf(h + h_change / modes[MODE_HSV]->get_slider_max(0), 0, 1);
+					h = Math::wrapf(h + h_change / 360.0, 0, 1);
 				}
 			}
 
@@ -1618,10 +1614,10 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 		float color_change = Input::get_singleton()->get_axis("ui_up", "ui_down");
 		if (!Math::is_zero_approx(color_change)) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
-				h = CLAMP(h + color_change / modes[MODE_HSV]->get_slider_max(0), 0, 1);
+				h = CLAMP(h + color_change / 360.0, 0, 1);
 			}
 			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
-				v = CLAMP(v - color_change / modes[MODE_HSV]->get_slider_max(2), 0, 1);
+				v = CLAMP(v - color_change / 100.0, 0, 1);
 			}
 
 			accept_event();
@@ -2013,7 +2009,6 @@ ColorPicker::ColorPicker() {
 	hb_edit->set_v_size_flags(SIZE_SHRINK_BEGIN);
 
 	uv_edit = memnew(Control);
-	uv_edit->set_name("UV EDIT");
 	hb_edit->add_child(uv_edit);
 	uv_edit->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(uv_edit));
 	uv_edit->set_mouse_filter(MOUSE_FILTER_PASS);
@@ -2165,7 +2160,6 @@ ColorPicker::ColorPicker() {
 	wheel_h_focus_display->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_h_focus_display));
 
 	wheel_uv = memnew(Control);
-	wheel_uv->set_name("WHEEL UV");
 	wheel_margin->add_child(wheel_uv);
 	wheel_uv->set_focus_mode(FOCUS_ALL);
 	wheel_uv->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_uv));
