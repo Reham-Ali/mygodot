@@ -251,17 +251,15 @@ void ColorPicker::set_focus_on_line_edit() {
 void ColorPicker::set_focus_on_picker_shape() {
 	switch (_get_actual_shape()) {
 		case SHAPE_HSV_RECTANGLE:
-			callable_mp(uv_edit, &Control::grab_focus).call_deferred();
-		break;
+			callable_mp(w_edit, &Control::grab_focus).call_deferred();
+			break;
 		case SHAPE_HSV_WHEEL:
-			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
-		break;
+			callable_mp(wheel_h_focus_display, &Control::grab_focus).call_deferred();
+			break;
 		case SHAPE_VHS_CIRCLE:
-			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
-		break;
 		case SHAPE_OKHSL_CIRCLE:
 			callable_mp(wheel_uv, &Control::grab_focus).call_deferred();
-		break;
+			break;
 		default: {
 		}
 	}
@@ -444,7 +442,7 @@ void ColorPicker::_slider_value_changed() {
 		s = sliders[1]->get_value() / 100.0;
 		v = sliders[2]->get_value() / 100.0;
 
-		hsv_keyboard_picker_cursor_position = Vector2i(0,0);
+		hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 		last_color = color;
 	}
 
@@ -1373,7 +1371,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 					real_t rad = center.angle_to_point(bev->get_position());
 					h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
 					s = CLAMP(dist / center.x, 0, 1);
-					hsv_keyboard_picker_cursor_position = Vector2i(0,0);
+					hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 				} else {
 					return;
 				}
@@ -1441,7 +1439,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			real_t rad = center.angle_to_point(mev->get_position());
 			h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
 			s = CLAMP(dist / center.x, 0, 1);
-			hsv_keyboard_picker_cursor_position = Vector2i(0,0);
+			hsv_keyboard_picker_cursor_position = Vector2i(0, 0);
 		} else {
 			if (spinning) {
 				real_t rad = center.angle_to_point(mev->get_position());
@@ -1486,13 +1484,11 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			color_change_vector.y += 1;
 		}
 
-
 		if (!Math::is_zero_approx(color_change_vector.length())) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
 				v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
-			}
-			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
+			} else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				Vector2 center = c->get_size() / 2.0;
 
 				// TODO: It's a hack, as it messes up if I calculate it this way always
@@ -1501,7 +1497,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 					hsv_keyboard_picker_cursor_position.y = center.y + (center.y * Math::sin(h * Math_TAU) * s);
 				}
 
-				real_t potential_new_cursor_distance = center.distance_to(hsv_keyboard_picker_cursor_position+color_change_vector);
+				real_t potential_new_cursor_distance = center.distance_to(hsv_keyboard_picker_cursor_position + color_change_vector);
 				if (potential_new_cursor_distance <= center.x) {
 					hsv_keyboard_picker_cursor_position += color_change_vector;
 				}
@@ -1510,8 +1506,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				real_t rad = center.angle_to_point(hsv_keyboard_picker_cursor_position);
 				h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
 				s = CLAMP(dist / center.x, 0, 1);
-			}
-			else if (actual_shape == SHAPE_HSV_WHEEL) {
+			} else if (actual_shape == SHAPE_HSV_WHEEL) {
 				if (c == wheel_uv) {
 					s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
 					v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
@@ -1546,7 +1541,6 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			last_color = color;
 			set_pick_color(color);
 
-			// TODO: Consider handling deffered mode
 			emit_signal(SNAME("color_changed"), color);
 		}
 	}
@@ -1615,8 +1609,7 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 		if (!Math::is_zero_approx(color_change)) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				h = CLAMP(h + color_change / 360.0, 0, 1);
-			}
-			else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
+			} else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				v = CLAMP(v - color_change / 100.0, 0, 1);
 			}
 
@@ -1625,7 +1618,6 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 			last_color = color;
 			set_pick_color(color);
 
-			// TODO: Consider handling deffered mode
 			emit_signal(SNAME("color_changed"), color);
 		}
 	}
