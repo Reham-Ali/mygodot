@@ -498,9 +498,9 @@ void SpriteFramesEditor::_toggle_show_settings() {
 
 void SpriteFramesEditor::_update_show_settings() {
 	if (is_layout_rtl()) {
-		toggle_settings_button->set_icon(get_editor_theme_icon(split_sheet_settings_vb->is_visible() ? SNAME("Back") : SNAME("Forward")));
+		toggle_settings_button->set_button_icon(get_editor_theme_icon(split_sheet_settings_vb->is_visible() ? SNAME("Back") : SNAME("Forward")));
 	} else {
-		toggle_settings_button->set_icon(get_editor_theme_icon(split_sheet_settings_vb->is_visible() ? SNAME("Forward") : SNAME("Back")));
+		toggle_settings_button->set_button_icon(get_editor_theme_icon(split_sheet_settings_vb->is_visible() ? SNAME("Forward") : SNAME("Back")));
 	}
 }
 
@@ -639,31 +639,32 @@ void SpriteFramesEditor::_notification(int p_what) {
 			pause_icon = get_editor_theme_icon(SNAME("Pause"));
 			_update_stop_icon();
 
-			autoplay->set_icon(get_editor_theme_icon(SNAME("AutoPlay")));
-			anim_loop->set_icon(get_editor_theme_icon(SNAME("Loop")));
-			play->set_icon(get_editor_theme_icon(SNAME("PlayStart")));
-			play_from->set_icon(get_editor_theme_icon(SNAME("Play")));
-			play_bw->set_icon(get_editor_theme_icon(SNAME("PlayStartBackwards")));
-			play_bw_from->set_icon(get_editor_theme_icon(SNAME("PlayBackwards")));
+			autoplay->set_button_icon(get_editor_theme_icon(SNAME("AutoPlay")));
+			anim_loop->set_button_icon(get_editor_theme_icon(SNAME("Loop")));
+			play->set_button_icon(get_editor_theme_icon(SNAME("PlayStart")));
+			play_from->set_button_icon(get_editor_theme_icon(SNAME("Play")));
+			play_bw->set_button_icon(get_editor_theme_icon(SNAME("PlayStartBackwards")));
+			play_bw_from->set_button_icon(get_editor_theme_icon(SNAME("PlayBackwards")));
 
-			load->set_icon(get_editor_theme_icon(SNAME("Load")));
-			load_sheet->set_icon(get_editor_theme_icon(SNAME("SpriteSheet")));
-			copy->set_icon(get_editor_theme_icon(SNAME("ActionCopy")));
-			paste->set_icon(get_editor_theme_icon(SNAME("ActionPaste")));
-			empty_before->set_icon(get_editor_theme_icon(SNAME("InsertBefore")));
-			empty_after->set_icon(get_editor_theme_icon(SNAME("InsertAfter")));
-			move_up->set_icon(get_editor_theme_icon(SNAME("MoveLeft")));
-			move_down->set_icon(get_editor_theme_icon(SNAME("MoveRight")));
-			delete_frame->set_icon(get_editor_theme_icon(SNAME("Remove")));
-			zoom_out->set_icon(get_editor_theme_icon(SNAME("ZoomLess")));
-			zoom_reset->set_icon(get_editor_theme_icon(SNAME("ZoomReset")));
-			zoom_in->set_icon(get_editor_theme_icon(SNAME("ZoomMore")));
-			add_anim->set_icon(get_editor_theme_icon(SNAME("New")));
-			delete_anim->set_icon(get_editor_theme_icon(SNAME("Remove")));
+			load->set_button_icon(get_editor_theme_icon(SNAME("Load")));
+			load_sheet->set_button_icon(get_editor_theme_icon(SNAME("SpriteSheet")));
+			copy->set_button_icon(get_editor_theme_icon(SNAME("ActionCopy")));
+			paste->set_button_icon(get_editor_theme_icon(SNAME("ActionPaste")));
+			empty_before->set_button_icon(get_editor_theme_icon(SNAME("InsertBefore")));
+			empty_after->set_button_icon(get_editor_theme_icon(SNAME("InsertAfter")));
+			move_up->set_button_icon(get_editor_theme_icon(SNAME("MoveLeft")));
+			move_down->set_button_icon(get_editor_theme_icon(SNAME("MoveRight")));
+			delete_frame->set_button_icon(get_editor_theme_icon(SNAME("Remove")));
+			zoom_out->set_button_icon(get_editor_theme_icon(SNAME("ZoomLess")));
+			zoom_reset->set_button_icon(get_editor_theme_icon(SNAME("ZoomReset")));
+			zoom_in->set_button_icon(get_editor_theme_icon(SNAME("ZoomMore")));
+			add_anim->set_button_icon(get_editor_theme_icon(SNAME("New")));
+			duplicate_anim->set_button_icon(get_editor_theme_icon(SNAME("Duplicate")));
+			delete_anim->set_button_icon(get_editor_theme_icon(SNAME("Remove")));
 			anim_search_box->set_right_icon(get_editor_theme_icon(SNAME("Search")));
-			split_sheet_zoom_out->set_icon(get_editor_theme_icon(SNAME("ZoomLess")));
-			split_sheet_zoom_reset->set_icon(get_editor_theme_icon(SNAME("ZoomReset")));
-			split_sheet_zoom_in->set_icon(get_editor_theme_icon(SNAME("ZoomMore")));
+			split_sheet_zoom_out->set_button_icon(get_editor_theme_icon(SNAME("ZoomLess")));
+			split_sheet_zoom_reset->set_button_icon(get_editor_theme_icon(SNAME("ZoomReset")));
+			split_sheet_zoom_in->set_button_icon(get_editor_theme_icon(SNAME("ZoomMore")));
 			split_sheet_scroll->add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SceneStringName(panel), SNAME("Tree")));
 
 			_update_show_settings();
@@ -1179,6 +1180,41 @@ void SpriteFramesEditor::_animation_add() {
 	animations->grab_focus();
 }
 
+void SpriteFramesEditor::_animation_duplicate() {
+	if (updating) {
+		return;
+	}
+
+	if (!frames->has_animation(edited_anim)) {
+		return;
+	}
+
+	int counter = 1;
+	String new_name = edited_anim;
+	PackedStringArray name_component = new_name.rsplit("_", true, 1);
+	String base_name = name_component[0];
+	if (name_component.size() > 1 && name_component[1].is_valid_int() && name_component[1].to_int() >= 0) {
+		counter = name_component[1].to_int();
+	}
+	new_name = base_name + "_" + itos(counter);
+	while (frames->has_animation(new_name)) {
+		counter++;
+		new_name = base_name + "_" + itos(counter);
+	}
+
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
+	undo_redo->create_action(TTR("Duplicate Animation"), UndoRedo::MERGE_DISABLE, EditorNode::get_singleton()->get_edited_scene());
+	undo_redo->add_do_method(frames.ptr(), "duplicate_animation", edited_anim, new_name);
+	undo_redo->add_undo_method(frames.ptr(), "remove_animation", new_name);
+	undo_redo->add_do_method(this, "_select_animation", new_name);
+	undo_redo->add_undo_method(this, "_select_animation", edited_anim);
+	undo_redo->add_do_method(this, "_update_library");
+	undo_redo->add_undo_method(this, "_update_library");
+	undo_redo->commit_action();
+
+	animations->grab_focus();
+}
+
 void SpriteFramesEditor::_animation_remove() {
 	if (updating) {
 		return;
@@ -1541,6 +1577,7 @@ void SpriteFramesEditor::edit(Ref<SpriteFrames> p_frames) {
 	_zoom_reset();
 
 	add_anim->set_disabled(read_only);
+	duplicate_anim->set_disabled(read_only);
 	delete_anim->set_disabled(read_only);
 	anim_speed->set_editable(!read_only);
 	anim_loop->set_disabled(read_only);
@@ -1703,9 +1740,9 @@ void SpriteFramesEditor::_update_stop_icon() {
 		is_playing = animated_sprite->call("is_playing");
 	}
 	if (is_playing) {
-		stop->set_icon(pause_icon);
+		stop->set_button_icon(pause_icon);
 	} else {
-		stop->set_icon(stop_icon);
+		stop->set_button_icon(stop_icon);
 	}
 }
 
@@ -1865,6 +1902,11 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	hbc_animlist->add_child(add_anim);
 	add_anim->connect(SceneStringName(pressed), callable_mp(this, &SpriteFramesEditor::_animation_add));
 
+	duplicate_anim = memnew(Button);
+	duplicate_anim->set_flat(true);
+	hbc_animlist->add_child(duplicate_anim);
+	duplicate_anim->connect(SceneStringName(pressed), callable_mp(this, &SpriteFramesEditor::_animation_duplicate));
+
 	delete_anim = memnew(Button);
 	delete_anim->set_theme_type_variation("FlatButton");
 	hbc_animlist->add_child(delete_anim);
@@ -1918,6 +1960,8 @@ SpriteFramesEditor::SpriteFramesEditor() {
 
 	add_anim->set_shortcut_context(animations);
 	add_anim->set_shortcut(ED_SHORTCUT("sprite_frames/new_animation", TTR("Add Animation"), KeyModifierMask::CMD_OR_CTRL | Key::N));
+	duplicate_anim->set_shortcut_context(animations);
+	duplicate_anim->set_shortcut(ED_SHORTCUT("sprite_frames/duplicate_animation", TTR("Duplicate Animation"), KeyModifierMask::CMD_OR_CTRL | Key::D));
 	delete_anim->set_shortcut_context(animations);
 	delete_anim->set_shortcut(ED_SHORTCUT("sprite_frames/delete_animation", TTR("Delete Animation"), Key::KEY_DELETE));
 
@@ -1942,6 +1986,7 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	sub_vb->add_child(hfc);
 
 	playback_container = memnew(HBoxContainer);
+	playback_container->set_layout_direction(LAYOUT_DIRECTION_LTR);
 	hfc->add_child(playback_container);
 
 	play_bw_from = memnew(Button);
@@ -1969,7 +2014,7 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	play_from->set_tooltip_text(TTR("Play selected animation from current pos. (D)"));
 	playback_container->add_child(play_from);
 
-	playback_container->add_child(memnew(VSeparator));
+	hfc->add_child(memnew(VSeparator));
 
 	autoplay->connect(SceneStringName(pressed), callable_mp(this, &SpriteFramesEditor::_autoplay_pressed));
 	autoplay->set_toggle_mode(true);

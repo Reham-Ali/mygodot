@@ -183,7 +183,7 @@ Ref<EditorTheme> EditorThemeManager::_create_base_theme(const Ref<EditorTheme> &
 
 		// If settings are comparable to the old theme, then just copy existing icons over.
 		// Otherwise, regenerate them.
-		bool keep_old_icons = (p_old_theme != nullptr && theme->get_generated_icons_hash() == p_old_theme->get_generated_icons_hash());
+		bool keep_old_icons = (p_old_theme.is_valid() && theme->get_generated_icons_hash() == p_old_theme->get_generated_icons_hash());
 		if (keep_old_icons) {
 			print_verbose("EditorTheme: Can keep old icons, copying.");
 			editor_copy_icons(theme, p_old_theme);
@@ -633,6 +633,16 @@ void EditorThemeManager::_create_shared_styles(const Ref<EditorTheme> &p_theme, 
 			// in 4.0, and even if it was, it may not always work in practice (e.g. running with compositing disabled).
 			p_config.popup_style->set_corner_radius_all(0);
 
+			p_config.popup_border_style = p_config.popup_style->duplicate();
+			p_config.popup_border_style->set_content_margin_all(MAX(Math::round(EDSCALE), p_config.border_width) + 2 + (p_config.base_margin * 1.5) * EDSCALE);
+			// Always display a border for popups like PopupMenus so they can be distinguished from their background.
+			p_config.popup_border_style->set_border_width_all(MAX(Math::round(EDSCALE), p_config.border_width));
+			if (p_config.draw_extra_borders) {
+				p_config.popup_border_style->set_border_color(p_config.extra_border_color_2);
+			} else {
+				p_config.popup_border_style->set_border_color(p_config.dark_color_2);
+			}
+
 			p_config.window_style = p_config.popup_style->duplicate();
 			p_config.window_style->set_border_color(p_config.base_color);
 			p_config.window_style->set_border_width(SIDE_TOP, 24 * EDSCALE);
@@ -707,7 +717,7 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 		}
 
 		// PopupPanel
-		p_theme->set_stylebox(SceneStringName(panel), "PopupPanel", p_config.popup_style);
+		p_theme->set_stylebox(SceneStringName(panel), "PopupPanel", p_config.popup_border_style);
 	}
 
 	// Buttons.
@@ -865,7 +875,6 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 		// CheckBox.
 		{
 			Ref<StyleBoxFlat> checkbox_style = p_config.panel_container_style->duplicate();
-			checkbox_style->set_content_margin_individual((p_config.increased_margin + 2) * EDSCALE, p_config.base_margin * EDSCALE, (p_config.increased_margin + 2) * EDSCALE, p_config.base_margin * EDSCALE);
 
 			p_theme->set_stylebox(CoreStringName(normal), "CheckBox", checkbox_style);
 			p_theme->set_stylebox(SceneStringName(pressed), "CheckBox", checkbox_style);
@@ -946,6 +955,8 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 
 			p_theme->set_color("custom_button_font_highlight", "Tree", p_config.font_hover_color);
 			p_theme->set_color(SceneStringName(font_color), "Tree", p_config.font_color);
+			p_theme->set_color("font_hovered_color", "Tree", p_config.mono_color);
+			p_theme->set_color("font_hovered_dimmed_color", "Tree", p_config.font_color);
 			p_theme->set_color("font_selected_color", "Tree", p_config.mono_color);
 			p_theme->set_color("font_disabled_color", "Tree", p_config.font_disabled_color);
 			p_theme->set_color("font_outline_color", "Tree", p_config.font_outline_color);
@@ -998,7 +1009,13 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 			Ref<StyleBoxFlat> style_tree_hover = p_config.base_style->duplicate();
 			style_tree_hover->set_bg_color(p_config.highlight_color * Color(1, 1, 1, 0.4));
 			style_tree_hover->set_border_width_all(0);
-			p_theme->set_stylebox("hover", "Tree", style_tree_hover);
+			p_theme->set_stylebox("hovered", "Tree", style_tree_hover);
+			p_theme->set_stylebox("button_hover", "Tree", style_tree_hover);
+
+			Ref<StyleBoxFlat> style_tree_hover_dimmed = p_config.base_style->duplicate();
+			style_tree_hover_dimmed->set_bg_color(p_config.highlight_color * Color(1, 1, 1, 0.2));
+			style_tree_hover_dimmed->set_border_width_all(0);
+			p_theme->set_stylebox("hovered_dimmed", "Tree", style_tree_hover_dimmed);
 
 			p_theme->set_stylebox("selected_focus", "Tree", style_tree_focus);
 			p_theme->set_stylebox("selected", "Tree", style_tree_selected);
@@ -1165,9 +1182,6 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 	// LineEdit & TextEdit.
 	{
 		Ref<StyleBoxFlat> text_editor_style = p_config.button_style->duplicate();
-		// The original button_style style has an extra 1 pixel offset that makes LineEdits not align with Buttons,
-		// so this compensates for that.
-		text_editor_style->set_content_margin(SIDE_TOP, text_editor_style->get_content_margin(SIDE_TOP) - 1 * EDSCALE);
 
 		// Don't round the bottom corners to make the line look sharper.
 		text_editor_style->set_corner_radius(CORNER_BOTTOM_LEFT, 0);
@@ -1310,18 +1324,11 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 
 		// PopupMenu.
 		{
-			Ref<StyleBoxFlat> style_popup_menu = p_config.popup_style->duplicate();
+			Ref<StyleBoxFlat> style_popup_menu = p_config.popup_border_style->duplicate();
 			// Use 1 pixel for the sides, since if 0 is used, the highlight of hovered items is drawn
 			// on top of the popup border. This causes a 'gap' in the panel border when an item is highlighted,
 			// and it looks weird. 1px solves this.
-			style_popup_menu->set_content_margin_individual(EDSCALE, 2 * EDSCALE, EDSCALE, 2 * EDSCALE);
-			// Always display a border for PopupMenus so they can be distinguished from their background.
-			style_popup_menu->set_border_width_all(EDSCALE);
-			if (p_config.draw_extra_borders) {
-				style_popup_menu->set_border_color(p_config.extra_border_color_2);
-			} else {
-				style_popup_menu->set_border_color(p_config.dark_color_2);
-			}
+			style_popup_menu->set_content_margin_individual(Math::round(EDSCALE), 2 * EDSCALE, Math::round(EDSCALE), 2 * EDSCALE);
 			p_theme->set_stylebox(SceneStringName(panel), "PopupMenu", style_popup_menu);
 
 			Ref<StyleBoxFlat> style_menu_hover = p_config.button_style_hover->duplicate();
@@ -1331,17 +1338,17 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 
 			Ref<StyleBoxLine> style_popup_separator(memnew(StyleBoxLine));
 			style_popup_separator->set_color(p_config.separator_color);
-			style_popup_separator->set_grow_begin(p_config.popup_margin - MAX(Math::round(EDSCALE), p_config.border_width));
-			style_popup_separator->set_grow_end(p_config.popup_margin - MAX(Math::round(EDSCALE), p_config.border_width));
+			style_popup_separator->set_grow_begin(Math::round(EDSCALE) - MAX(Math::round(EDSCALE), p_config.border_width));
+			style_popup_separator->set_grow_end(Math::round(EDSCALE) - MAX(Math::round(EDSCALE), p_config.border_width));
 			style_popup_separator->set_thickness(MAX(Math::round(EDSCALE), p_config.border_width));
 
 			Ref<StyleBoxLine> style_popup_labeled_separator_left(memnew(StyleBoxLine));
-			style_popup_labeled_separator_left->set_grow_begin(p_config.popup_margin - MAX(Math::round(EDSCALE), p_config.border_width));
+			style_popup_labeled_separator_left->set_grow_begin(Math::round(EDSCALE) - MAX(Math::round(EDSCALE), p_config.border_width));
 			style_popup_labeled_separator_left->set_color(p_config.separator_color);
 			style_popup_labeled_separator_left->set_thickness(MAX(Math::round(EDSCALE), p_config.border_width));
 
 			Ref<StyleBoxLine> style_popup_labeled_separator_right(memnew(StyleBoxLine));
-			style_popup_labeled_separator_right->set_grow_end(p_config.popup_margin - MAX(Math::round(EDSCALE), p_config.border_width));
+			style_popup_labeled_separator_right->set_grow_end(Math::round(EDSCALE) - MAX(Math::round(EDSCALE), p_config.border_width));
 			style_popup_labeled_separator_right->set_color(p_config.separator_color);
 			style_popup_labeled_separator_right->set_thickness(MAX(Math::round(EDSCALE), p_config.border_width));
 
@@ -1419,21 +1426,24 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 		p_theme->set_icon("decrement_highlight", "VScrollBar", empty_icon);
 		p_theme->set_icon("decrement_pressed", "VScrollBar", empty_icon);
 
+		// Slider
+		const int background_margin = MAX(2, p_config.base_margin / 2);
+
 		// HSlider.
 		p_theme->set_icon("grabber_highlight", "HSlider", p_theme->get_icon(SNAME("GuiSliderGrabberHl"), EditorStringName(EditorIcons)));
 		p_theme->set_icon("grabber", "HSlider", p_theme->get_icon(SNAME("GuiSliderGrabber"), EditorStringName(EditorIcons)));
-		p_theme->set_stylebox("slider", "HSlider", make_flat_stylebox(p_config.dark_color_3, 0, p_config.base_margin / 2, 0, p_config.base_margin / 2, p_config.corner_radius));
-		p_theme->set_stylebox("grabber_area", "HSlider", make_flat_stylebox(p_config.contrast_color_1, 0, p_config.base_margin / 2, 0, p_config.base_margin / 2, p_config.corner_radius));
-		p_theme->set_stylebox("grabber_area_highlight", "HSlider", make_flat_stylebox(p_config.contrast_color_1, 0, p_config.base_margin / 2, 0, p_config.base_margin / 2));
+		p_theme->set_stylebox("slider", "HSlider", make_flat_stylebox(p_config.dark_color_3, 0, background_margin, 0, background_margin, p_config.corner_radius));
+		p_theme->set_stylebox("grabber_area", "HSlider", make_flat_stylebox(p_config.contrast_color_1, 0, background_margin, 0, background_margin, p_config.corner_radius));
+		p_theme->set_stylebox("grabber_area_highlight", "HSlider", make_flat_stylebox(p_config.contrast_color_1, 0, background_margin, 0, background_margin));
 		p_theme->set_constant("center_grabber", "HSlider", 0);
 		p_theme->set_constant("grabber_offset", "HSlider", 0);
 
 		// VSlider.
 		p_theme->set_icon("grabber", "VSlider", p_theme->get_icon(SNAME("GuiSliderGrabber"), EditorStringName(EditorIcons)));
 		p_theme->set_icon("grabber_highlight", "VSlider", p_theme->get_icon(SNAME("GuiSliderGrabberHl"), EditorStringName(EditorIcons)));
-		p_theme->set_stylebox("slider", "VSlider", make_flat_stylebox(p_config.dark_color_3, p_config.base_margin / 2, 0, p_config.base_margin / 2, 0, p_config.corner_radius));
-		p_theme->set_stylebox("grabber_area", "VSlider", make_flat_stylebox(p_config.contrast_color_1, p_config.base_margin / 2, 0, p_config.base_margin / 2, 0, p_config.corner_radius));
-		p_theme->set_stylebox("grabber_area_highlight", "VSlider", make_flat_stylebox(p_config.contrast_color_1, p_config.base_margin / 2, 0, p_config.base_margin / 2, 0));
+		p_theme->set_stylebox("slider", "VSlider", make_flat_stylebox(p_config.dark_color_3, background_margin, 0, background_margin, 0, p_config.corner_radius));
+		p_theme->set_stylebox("grabber_area", "VSlider", make_flat_stylebox(p_config.contrast_color_1, background_margin, 0, background_margin, 0, p_config.corner_radius));
+		p_theme->set_stylebox("grabber_area_highlight", "VSlider", make_flat_stylebox(p_config.contrast_color_1, background_margin, 0, background_margin, 0));
 		p_theme->set_constant("center_grabber", "VSlider", 0);
 		p_theme->set_constant("grabber_offset", "VSlider", 0);
 	}
@@ -1507,7 +1517,9 @@ void EditorThemeManager::_populate_standard_styles(const Ref<EditorTheme> &p_the
 		p_theme->set_constant("buttons_vertical_separation", "SpinBox", 0);
 		p_theme->set_constant("field_and_buttons_separation", "SpinBox", 2);
 		p_theme->set_constant("buttons_width", "SpinBox", 16);
+#ifndef DISABLE_DEPRECATED
 		p_theme->set_constant("set_min_buttons_width_from_icons", "SpinBox", 1);
+#endif
 	}
 
 	// ProgressBar.
@@ -1804,7 +1816,9 @@ void EditorThemeManager::_populate_editor_styles(const Ref<EditorTheme> &p_theme
 		p_theme->set_color("background", EditorStringName(Editor), background_color_opaque);
 		p_theme->set_stylebox("Background", EditorStringName(EditorStyles), make_flat_stylebox(background_color_opaque, p_config.base_margin, p_config.base_margin, p_config.base_margin, p_config.base_margin));
 
-		p_theme->set_stylebox("PanelForeground", EditorStringName(EditorStyles), p_config.base_style);
+		Ref<StyleBoxFlat> editor_panel_foreground = p_config.base_style->duplicate();
+		editor_panel_foreground->set_corner_radius_all(0);
+		p_theme->set_stylebox("PanelForeground", EditorStringName(EditorStyles), editor_panel_foreground);
 
 		// Editor focus.
 		p_theme->set_stylebox("Focus", EditorStringName(EditorStyles), p_config.button_style_focus);
@@ -1842,6 +1856,12 @@ void EditorThemeManager::_populate_editor_styles(const Ref<EditorTheme> &p_theme
 		p_theme->set_stylebox("ScriptEditorPanel", EditorStringName(EditorStyles), make_empty_stylebox(p_config.base_margin, 0, p_config.base_margin, p_config.base_margin));
 		p_theme->set_stylebox("ScriptEditorPanelFloating", EditorStringName(EditorStyles), make_empty_stylebox(0, 0, 0, 0));
 		p_theme->set_stylebox("ScriptEditor", EditorStringName(EditorStyles), make_empty_stylebox(0, 0, 0, 0));
+
+		// Game view.
+		p_theme->set_type_variation("GamePanel", "Panel");
+		Ref<StyleBoxFlat> game_panel = p_theme->get_stylebox(SNAME("panel"), SNAME("Panel"))->duplicate();
+		game_panel->set_corner_radius_all(0);
+		p_theme->set_stylebox(SceneStringName(panel), "GamePanel", game_panel);
 
 		// Main menu.
 		Ref<StyleBoxFlat> menu_transparent_style = p_config.button_style->duplicate();
@@ -2112,21 +2132,6 @@ void EditorThemeManager::_populate_editor_styles(const Ref<EditorTheme> &p_theme
 
 		// EditorValidationPanel.
 		p_theme->set_stylebox(SceneStringName(panel), "EditorValidationPanel", p_config.tree_panel_style);
-
-		// ControlEditor.
-		{
-			p_theme->set_type_variation("ControlEditorPopupPanel", "PopupPanel");
-
-			Ref<StyleBoxFlat> control_editor_popup_style = p_config.popup_style->duplicate();
-			control_editor_popup_style->set_shadow_size(0);
-			control_editor_popup_style->set_content_margin(SIDE_LEFT, p_config.base_margin * EDSCALE);
-			control_editor_popup_style->set_content_margin(SIDE_TOP, p_config.base_margin * EDSCALE);
-			control_editor_popup_style->set_content_margin(SIDE_RIGHT, p_config.base_margin * EDSCALE);
-			control_editor_popup_style->set_content_margin(SIDE_BOTTOM, p_config.base_margin * EDSCALE);
-			control_editor_popup_style->set_border_width_all(0);
-
-			p_theme->set_stylebox(SceneStringName(panel), "ControlEditorPopupPanel", control_editor_popup_style);
-		}
 	}
 
 	// Editor inspector.

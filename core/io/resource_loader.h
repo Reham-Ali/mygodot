@@ -81,6 +81,7 @@ public:
 	virtual String get_resource_type(const String &p_path) const;
 	virtual String get_resource_script_class(const String &p_path) const;
 	virtual ResourceUID::ID get_resource_uid(const String &p_path) const;
+	virtual bool has_custom_uid_support() const;
 	virtual void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false);
 	virtual Error rename_dependencies(const String &p_path, const HashMap<String, String> &p_map);
 	virtual bool is_import_valid(const String &p_path) const { return true; }
@@ -106,6 +107,8 @@ class ResourceLoader {
 		MAX_LOADERS = 64
 	};
 
+	struct ThreadLoadTask;
+
 public:
 	enum ThreadLoadStatus {
 		THREAD_LOAD_INVALID_RESOURCE,
@@ -124,7 +127,7 @@ public:
 		String local_path;
 		String user_path;
 		uint32_t user_rc = 0; // Having user RC implies regular RC incremented in one, until the user RC reaches zero.
-		Ref<Resource> res_if_unregistered;
+		ThreadLoadTask *task_if_unregistered = nullptr;
 
 		void clear();
 
@@ -187,6 +190,13 @@ private:
 		Ref<Resource> resource;
 		bool use_sub_threads = false;
 		HashSet<String> sub_tasks;
+
+		struct ResourceChangedConnection {
+			Resource *source = nullptr;
+			Callable callable;
+			uint32_t flags = 0;
+		};
+		LocalVector<ResourceChangedConnection> resource_changed_connections;
 	};
 
 	static void _run_load_task(void *p_userdata);
@@ -194,6 +204,7 @@ private:
 	static thread_local int load_nesting;
 	static thread_local HashMap<int, HashMap<String, Ref<Resource>>> res_ref_overrides; // Outermost key is nesting level.
 	static thread_local Vector<String> load_paths_stack;
+	static thread_local ThreadLoadTask *curr_load_task;
 
 	static SafeBinaryMutex<BINARY_MUTEX_TAG> thread_load_mutex;
 	friend SafeBinaryMutex<BINARY_MUTEX_TAG> &_get_res_loader_mutex();
@@ -212,7 +223,11 @@ public:
 	static ThreadLoadStatus load_threaded_get_status(const String &p_path, float *r_progress = nullptr);
 	static Ref<Resource> load_threaded_get(const String &p_path, Error *r_error = nullptr);
 
-	static bool is_within_load() { return load_nesting > 0; };
+	static bool is_within_load() { return load_nesting > 0; }
+
+	static void resource_changed_connect(Resource *p_source, const Callable &p_callable, uint32_t p_flags);
+	static void resource_changed_disconnect(Resource *p_source, const Callable &p_callable);
+	static void resource_changed_emit(Resource *p_source);
 
 	static Ref<Resource> load(const String &p_path, const String &p_type_hint = "", ResourceFormatLoader::CacheMode p_cache_mode = ResourceFormatLoader::CACHE_MODE_REUSE, Error *r_error = nullptr);
 	static bool exists(const String &p_path, const String &p_type_hint = "");
@@ -224,6 +239,7 @@ public:
 	static String get_resource_type(const String &p_path);
 	static String get_resource_script_class(const String &p_path);
 	static ResourceUID::ID get_resource_uid(const String &p_path);
+	static bool has_custom_uid_support(const String &p_path);
 	static void get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types = false);
 	static Error rename_dependencies(const String &p_path, const HashMap<String, String> &p_map);
 	static bool is_import_valid(const String &p_path);
@@ -287,6 +303,8 @@ public:
 	static Ref<Resource> get_resource_ref_override(const String &p_path);
 
 	static bool is_cleaning_tasks();
+
+	static Vector<String> list_directory(const String &p_directory);
 
 	static void initialize();
 	static void finalize();

@@ -33,6 +33,7 @@
 #include "core/input/input_map.h"
 #include "core/os/keyboard.h"
 #include "editor/debugger/editor_debugger_node.h"
+#include "editor/editor_inspector.h"
 #include "editor/editor_log.h"
 #include "editor/editor_node.h"
 #include "editor/editor_property_name_processor.h"
@@ -45,6 +46,7 @@
 #include "editor/plugins/node_3d_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
+#include "scene/gui/check_button.h"
 #include "scene/gui/panel_container.h"
 #include "scene/gui/tab_container.h"
 #include "scene/gui/texture_rect.h"
@@ -104,8 +106,8 @@ void EditorSettingsDialog::update_navigation_preset() {
 		orbit_mod_key_2 = InputEventKey::create_reference(Key::NONE);
 		pan_mod_key_1 = InputEventKey::create_reference(Key::SHIFT);
 		pan_mod_key_2 = InputEventKey::create_reference(Key::NONE);
-		zoom_mod_key_1 = InputEventKey::create_reference(Key::SHIFT);
-		zoom_mod_key_2 = InputEventKey::create_reference(Key::CTRL);
+		zoom_mod_key_1 = InputEventKey::create_reference(Key::CTRL);
+		zoom_mod_key_2 = InputEventKey::create_reference(Key::NONE);
 	} else if (nav_scheme == Node3DEditorViewport::NAVIGATION_MAYA) {
 		set_preset = true;
 		set_orbit_mouse_button = Node3DEditorViewport::NAVIGATION_LEFT_MOUSE;
@@ -283,7 +285,7 @@ void EditorSettingsDialog::_update_icons() {
 	shortcut_search_box->set_right_icon(shortcuts->get_editor_theme_icon(SNAME("Search")));
 	shortcut_search_box->set_clear_button_enabled(true);
 
-	restart_close_button->set_icon(shortcuts->get_editor_theme_icon(SNAME("Close")));
+	restart_close_button->set_button_icon(shortcuts->get_editor_theme_icon(SNAME("Close")));
 	restart_container->add_theme_style_override(SceneStringName(panel), shortcuts->get_theme_stylebox(SceneStringName(panel), SNAME("Tree")));
 	restart_icon->set_texture(shortcuts->get_editor_theme_icon(SNAME("StatusWarning")));
 	restart_label->add_theme_color_override(SceneStringName(font_color), shortcuts->get_theme_color(SNAME("warning_color"), EditorStringName(Editor)));
@@ -696,7 +698,7 @@ Variant EditorSettingsDialog::get_drag_data_fw(const Point2 &p_point, Control *p
 		return Variant();
 	}
 
-	String label_text = "Event " + itos(selected->get_meta("event_index"));
+	String label_text = vformat(TTRC("Event %d"), selected->get_meta("event_index"));
 	Label *label = memnew(Label(label_text));
 	label->set_modulate(Color(1, 1, 1, 1.0f));
 	shortcuts->set_drag_preview(label);
@@ -803,6 +805,10 @@ void EditorSettingsDialog::_focus_current_search_box() {
 	}
 }
 
+void EditorSettingsDialog::_advanced_toggled(bool p_button_pressed) {
+	EditorSettings::get_singleton()->set("_editor_settings_advanced_mode", p_button_pressed);
+}
+
 void EditorSettingsDialog::_editor_restart() {
 	EditorNode::get_singleton()->save_all_scenes();
 	EditorNode::get_singleton()->restart_editor();
@@ -845,9 +851,17 @@ EditorSettingsDialog::EditorSettingsDialog() {
 	search_box->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	hbc->add_child(search_box);
 
+	advanced_switch = memnew(CheckButton(TTR("Advanced Settings")));
+	hbc->add_child(advanced_switch);
+
+	bool use_advanced = EDITOR_DEF("_editor_settings_advanced_mode", false);
+	advanced_switch->set_pressed(use_advanced);
+	advanced_switch->connect(SceneStringName(toggled), callable_mp(this, &EditorSettingsDialog::_advanced_toggled));
+
 	inspector = memnew(SectionedInspector);
 	inspector->get_inspector()->set_use_filter(true);
 	inspector->register_search_box(search_box);
+	inspector->register_advanced_toggle(advanced_switch);
 	inspector->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tab_general->add_child(inspector);
 	inspector->get_inspector()->connect("property_edited", callable_mp(this, &EditorSettingsDialog::_settings_property_edited));
