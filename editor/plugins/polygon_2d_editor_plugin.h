@@ -50,37 +50,43 @@ class VScrollBar;
 class Polygon2DEditor : public AbstractPolygon2DEditor {
 	GDCLASS(Polygon2DEditor, AbstractPolygon2DEditor);
 
+	enum {
+		MENU_POLYGON_TO_UV,
+		MENU_UV_TO_POLYGON,
+		MENU_UV_CLEAR,
+		MENU_GRID_SETTINGS,
+	};
+
 	enum Mode {
-		MODE_EDIT_UV = MODE_CONT,
-		UVEDIT_POLYGON_TO_UV,
-		UVEDIT_UV_TO_POLYGON,
-		UVEDIT_UV_CLEAR,
-		UVEDIT_GRID_SETTINGS
+		MODE_POINTS,
+		MODE_POLYGONS,
+		MODE_UV,
+		MODE_WEIGHTS,
+		MODE_MAX
 	};
 
-	enum UVMode {
-		UV_MODE_CREATE,
-		UV_MODE_CREATE_INTERNAL,
-		UV_MODE_REMOVE_INTERNAL,
-		UV_MODE_EDIT_POINT,
-		UV_MODE_MOVE,
-		UV_MODE_ROTATE,
-		UV_MODE_SCALE,
-		UV_MODE_ADD_POLYGON,
-		UV_MODE_REMOVE_POLYGON,
-		UV_MODE_PAINT_WEIGHT,
-		UV_MODE_CLEAR_WEIGHT,
-		UV_MODE_MAX
+	enum Action {
+		ACTION_CREATE,
+		ACTION_CREATE_INTERNAL,
+		ACTION_REMOVE_INTERNAL,
+		ACTION_EDIT_POINT,
+		ACTION_MOVE,
+		ACTION_ROTATE,
+		ACTION_SCALE,
+		ACTION_ADD_POLYGON,
+		ACTION_REMOVE_POLYGON,
+		ACTION_PAINT_WEIGHT,
+		ACTION_CLEAR_WEIGHT,
+		ACTION_MAX
 	};
-
-	Button *uv_edit_mode[4];
-	Ref<ButtonGroup> uv_edit_group;
 
 	Polygon2D *node = nullptr;
 
-	UVMode uv_mode;
 	VBoxContainer *uv_edit = nullptr;
-	Button *uv_button[UV_MODE_MAX];
+	Mode current_mode;
+	Button *mode_buttons[MODE_MAX];
+	Action selected_action;
+	Button *action_buttons[ACTION_MAX];
 	Button *b_snap_enable = nullptr;
 	Button *b_snap_grid = nullptr;
 	Panel *uv_edit_background = nullptr;
@@ -126,7 +132,7 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	bool uv_drag;
 	bool uv_create;
 	Vector<int> polygon_create;
-	UVMode uv_move_current;
+	Action current_action;
 	Vector2 uv_drag_from;
 
 	AcceptDialog *error = nullptr;
@@ -136,7 +142,7 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	Vector2 snap_offset;
 	Vector2 snap_step;
 
-	virtual void _menu_option(int p_option) override;
+	void _edit_menu_option(int p_option);
 
 	void _cancel_editing();
 	void _update_polygon_editing_state();
@@ -146,7 +152,7 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	void _update_zoom_and_pan(bool p_zoom_at_center);
 	void _uv_input(const Ref<InputEvent> &p_input);
 	void _uv_draw();
-	void _uv_mode(int p_mode);
+	void _set_action(int p_mode);
 
 	void _set_use_snap(bool p_use);
 	void _set_show_grid(bool p_show);
@@ -155,7 +161,7 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	void _set_snap_step_x(real_t p_val);
 	void _set_snap_step_y(real_t p_val);
 
-	void _uv_edit_mode_select(int p_mode);
+	void _select_mode(int p_mode);
 	void _bone_paint_selected(int p_index);
 
 	int _get_polygon_count() const override;
