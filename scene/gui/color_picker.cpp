@@ -304,22 +304,26 @@ void ColorPicker::_update_controls() {
 			w_edit->show();
 			uv_edit->show();
 			btn_shape->show();
+
 			if (wheel_uv->has_focus()) {
 				uv_edit->grab_focus();
-			} else if (wheel_margin->has_focus()) {
+			} else if (wheel_h_focus_display->has_focus()) {
 				w_edit->grab_focus();
 			}
+
 			wheel_edit->hide();
-			wheel_margin->set_focus_mode(FOCUS_NONE);
+			wheel_h_focus_display->hide();
 			break;
 		case SHAPE_HSV_WHEEL:
 			wheel_edit->show();
-			wheel_margin->set_focus_mode(FOCUS_ALL);
+			wheel_h_focus_display->show();
+
 			if (w_edit->has_focus()) {
-				wheel_margin->grab_focus();
+				wheel_h_focus_display->grab_focus();
 			} else if (uv_edit->has_focus()) {
 				wheel_uv->grab_focus();
 			}
+
 			w_edit->hide();
 			uv_edit->hide();
 			btn_shape->show();
@@ -328,33 +332,37 @@ void ColorPicker::_update_controls() {
 		case SHAPE_VHS_CIRCLE:
 			wheel_edit->show();
 			w_edit->show();
+
 			if (uv_edit->has_focus()) {
 				wheel_uv->grab_focus();
-			} else if (wheel_margin->has_focus()) {
+			} else if (wheel_h_focus_display->has_focus()) {
 				w_edit->grab_focus();
 			}
+
 			uv_edit->hide();
 			btn_shape->show();
 			wheel->set_material(circle_mat);
 			circle_mat->set_shader(circle_shader);
-			wheel_margin->set_focus_mode(FOCUS_NONE);
+			wheel_h_focus_display->hide();
 			break;
 		case SHAPE_OKHSL_CIRCLE:
 			wheel_edit->show();
 			w_edit->show();
+
 			if (uv_edit->has_focus()) {
 				wheel_uv->grab_focus();
-			} else if (wheel_margin->has_focus()) {
+			} else if (wheel_h_focus_display->has_focus()) {
 				w_edit->grab_focus();
 			}
+
 			uv_edit->hide();
 			btn_shape->show();
 			wheel->set_material(circle_mat);
 			circle_mat->set_shader(circle_ok_color_shader);
-			wheel_margin->set_focus_mode(FOCUS_NONE);
+			wheel_h_focus_display->hide();
 			break;
 		case SHAPE_NONE:
-			wheel_margin->set_focus_mode(FOCUS_NONE);
+			wheel_h_focus_display->hide();
 			wheel_edit->hide();
 			w_edit->hide();
 			uv_edit->hide();
@@ -1338,10 +1346,6 @@ void ColorPicker::_hsv_draw(int p_which, Control *c) {
 		if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 			circle_mat->set_shader_parameter("v", v);
 		}
-	} else if (p_which == 3) {
-		int margin = c->get_theme_constant("margin_bottom");
-		focus_rect.set_position(Vector2(-margin, -margin));
-		focus_rect.set_size(Vector2(focus_rect.get_size().x+margin*2, focus_rect.get_size().y+margin));
 	}
 
 	if (c->has_focus()) {
@@ -1382,7 +1386,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 						bev->get_position().y < corner_y || bev->get_position().y > c->get_size().y - corner_y) {
 					{
 						real_t dist = center.distance_to(bev->get_position());
-						wheel_margin->grab_focus();
+						wheel_h_focus_display->grab_focus();
 						if (dist >= center.x * 0.84 && dist <= center.x) {
 							real_t rad = center.angle_to_point(bev->get_position());
 							h = ((rad >= 0) ? rad : (Math_TAU + rad)) / Math_TAU;
@@ -1513,7 +1517,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				if (c == wheel_uv) {
 					s = CLAMP(s + color_change_vector.x / modes[MODE_HSV]->get_slider_max(1), 0, 1);
 					v = CLAMP(v - color_change_vector.y / modes[MODE_HSV]->get_slider_max(2), 0, 1);
-				} else if (c == wheel_margin) {
+				} else if (c == wheel_h_focus_display) {
 					int h_change = 0;
 
 					if (Math::is_equal_approx(h, 0) || Math::is_equal_approx(h, 0.5f) || Math::is_equal_approx(h, 1)) {
@@ -2146,14 +2150,19 @@ ColorPicker::ColorPicker() {
 	wheel_margin = memnew(MarginContainer);
 	wheel_margin->add_theme_constant_override("margin_bottom", 8);
 	wheel_edit->add_child(wheel_margin);
-	// TODO: Hack - I cannot draw focus stylebox on wheel itself, as it's drawing based on shader
-	wheel_margin->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(3, wheel_margin));
-	wheel_margin->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_margin));
 
 	wheel = memnew(Control);
 	wheel_margin->add_child(wheel);
 	wheel->set_mouse_filter(MOUSE_FILTER_PASS);
 	wheel->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(2, wheel));
+
+	// TODO: Hack - I cannot draw focus stylebox on wheel itself, as it's drawing based on shader
+	wheel_h_focus_display = memnew(Control);
+	wheel_margin->add_child(wheel_h_focus_display);
+	wheel_h_focus_display->set_mouse_filter(MOUSE_FILTER_PASS);
+	wheel_h_focus_display->set_focus_mode(FOCUS_ALL);
+	wheel_h_focus_display->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(3, wheel_h_focus_display));
+	wheel_h_focus_display->connect(SceneStringName(gui_input), callable_mp(this, &ColorPicker::_uv_input).bind(wheel_h_focus_display));
 
 	wheel_uv = memnew(Control);
 	wheel_uv->set_name("WHEEL UV");

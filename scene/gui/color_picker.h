@@ -145,6 +145,7 @@ private:
 	Ref<ShaderMaterial> circle_mat;
 	Control *wheel = nullptr;
 	Control *wheel_uv = nullptr;
+	Control *wheel_h_focus_display = nullptr;
 	TextureRect *sample = nullptr;
 	GridContainer *preset_container = nullptr;
 	HBoxContainer *recent_preset_hbc = nullptr;
