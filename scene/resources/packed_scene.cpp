@@ -1056,13 +1056,13 @@ Error SceneState::_parse_connections(Node *p_owner, Node *p_node, HashMap<String
 			const Node::Connection &c = F;
 
 			// Don't save connections that are not persistent.
-			if (!bool(c.flags & CONNECT_PERSIST)) {
+			if (!(c.flags & CONNECT_PERSIST)) {
 				continue;
 			}
 
 			// Don't include signals that are from scene instances
 			// (they are already saved in the scenes themselves).
-			if (bool(c.flags & CONNECT_INHERITED)) {
+			if (c.flags & CONNECT_INHERITED) {
 				continue;
 			}
 

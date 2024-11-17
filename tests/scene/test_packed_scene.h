@@ -56,7 +56,7 @@ TEST_CASE("[PackedScene] Pack Scene and Retrieve State") {
 	memdelete(scene);
 }
 
-TEST_CASE("[PackedScene] Test That Correct Signals are Preserved when Packing Scene") {
+TEST_CASE("[PackedScene] Signals Preserved when Packing Scene") {
 	// Create main scene
 	// root
 	// `- sub_node (local)
