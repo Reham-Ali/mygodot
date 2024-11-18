@@ -621,9 +621,7 @@ void Main::print_help(const char *p_binary) {
 	print_help_title("Debug options");
 	print_help_option("-d, --debug", "Debug (local stdout debugger).\n");
 	print_help_option("-b, --breakpoints", "Breakpoint list as source::line comma-separated pairs, no spaces (use %%20 instead).\n");
-#ifdef DEBUG_ENABLED
-	print_help_option("--fail-on-error", "Exit with a failure code if any errors are encountered.\n", CLI_OPTION_AVAILABILITY_TEMPLATE_DEBUG);
-#endif
+	print_help_option("--fail-on-error", "Set the exit code to 1 if any errors are encountered.\n");
 	print_help_option("--profiling", "Enable profiling in the script debugger.\n");
 	print_help_option("--gpu-profile", "Show a GPU profile of the tasks that took the most time during frame rendering.\n");
 	print_help_option("--gpu-validation", "Enable graphics API validation layers for debugging.\n");
@@ -1628,6 +1626,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				goto error;
 			}
 
+		} else if (arg == "--fail-on-error") {
+			fail_on_error = true;
 		} else if (arg == "--max-fps") { // set maximum rendered FPS
 
 			if (N) {
@@ -1671,8 +1671,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			debug_uri = "local://";
 			OS::get_singleton()->_debug_stdout = true;
 #if defined(DEBUG_ENABLED)
-		} else if (arg == "--fail-on-error") {
-			fail_on_error = true;
 		} else if (arg == "--debug-collisions") {
 			debug_collisions = true;
 		} else if (arg == "--debug-paths") {
