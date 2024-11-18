@@ -218,7 +218,7 @@ void OS::set_exit_code(int p_code) {
 	// Don't allow setting the exit code to success if an error has
 	// occurred and fail on error is enabled.
 	if (p_code == EXIT_SUCCESS && _fail_on_error && _error_occurred) {
-		WARN_PRINT_ONCE("Cannot set exit code to 0 after an error has occurred.");
+		WARN_VERBOSE("Cannot set exit code to 0 after an error has occurred.");
 		return;
 	}
 	_exit_code = p_code;
