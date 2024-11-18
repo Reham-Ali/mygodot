@@ -225,7 +225,7 @@ String OS_Unix::get_version() const {
 	return "";
 }
 
-String OS_Unix::get_tmp_path() const {
+String OS_Unix::get_temp_path() const {
 	return "/tmp";
 }
 
