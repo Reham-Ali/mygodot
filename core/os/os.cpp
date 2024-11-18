@@ -216,8 +216,8 @@ int OS::get_exit_code() const {
 
 void OS::set_exit_code(int p_code) {
 	// Don't allow setting the exit code to success if an error has
-	// occurred. Error tracking only happens when fail on error is enabled.
-	if (p_code == EXIT_SUCCESS && _error_occurred) {
+	// occurred and fail on error is enabled.
+	if (p_code == EXIT_SUCCESS && _fail_on_error && _error_occurred) {
 		WARN_PRINT_ONCE("Cannot set exit code to 0 after an error has occurred.");
 		return;
 	}
