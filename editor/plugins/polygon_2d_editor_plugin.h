@@ -82,24 +82,27 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 
 	Polygon2D *node = nullptr;
 
-	VBoxContainer *uv_edit = nullptr;
+	VBoxContainer *polygon_edit = nullptr;
 	Mode current_mode;
 	Button *mode_buttons[MODE_MAX];
 	Action selected_action;
 	Button *action_buttons[ACTION_MAX];
 	Button *b_snap_enable = nullptr;
 	Button *b_snap_grid = nullptr;
-	Panel *uv_edit_background = nullptr;
-	Polygon2D *preview_polygon = nullptr;
-	Control *uv_edit_draw = nullptr;
-	EditorZoomWidget *zoom_widget = nullptr;
-	HScrollBar *uv_hscroll = nullptr;
-	VScrollBar *uv_vscroll = nullptr;
-	MenuButton *uv_menu = nullptr;
+	MenuButton *edit_menu = nullptr;
 
-	Ref<ViewPanner> uv_panner;
-	void _uv_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event);
-	void _uv_zoom_callback(float p_zoom_factor, Vector2 p_origin, Ref<InputEvent> p_event);
+	Control *canvas = nullptr;
+	Panel *canvas_background = nullptr;
+	Polygon2D *preview_polygon = nullptr;
+	EditorZoomWidget *zoom_widget = nullptr;
+	HScrollBar *hscroll = nullptr;
+	VScrollBar *vscroll = nullptr;
+
+	Ref<ViewPanner> panner;
+	void _pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event);
+	void _zoom_callback(float p_zoom_factor, Vector2 p_origin, Ref<InputEvent> p_event);
+	Vector2 draw_offset;
+	real_t draw_zoom;
 
 	VBoxContainer *bone_scroll_main_vb = nullptr;
 	ScrollContainer *bone_scroll = nullptr;
@@ -117,23 +120,21 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 	void _sync_bones();
 	void _update_bone_list();
 
-	Vector2 uv_draw_ofs;
-	real_t uv_draw_zoom;
-	Vector<Vector2> points_prev;
-	Vector<Vector2> uv_create_uv_prev;
-	Vector<Vector2> uv_create_poly_prev;
-	Vector<Color> uv_create_colors_prev;
-	int uv_create_prev_internal_vertices = 0;
-	Array uv_create_bones_prev;
-	Array polygons_prev;
+	Vector<Vector2> editing_points;
+	Vector<Vector2> previous_uv;
+	Vector<Vector2> previous_polygon;
+	Vector<Color> previous_colors;
+	int previous_internal_vertices = 0;
+	Array previous_bones;
+	Array previous_polygons;
 
-	Vector2 uv_create_to;
+	Vector2 create_to;
 	int point_drag_index;
-	bool uv_drag;
-	bool uv_create;
+	bool is_dragging;
+	bool is_creating;
 	Vector<int> polygon_create;
 	Action current_action;
-	Vector2 uv_drag_from;
+	Vector2 drag_from;
 
 	AcceptDialog *error = nullptr;
 
@@ -150,8 +151,8 @@ class Polygon2DEditor : public AbstractPolygon2DEditor {
 
 	void _center_view();
 	void _update_zoom_and_pan(bool p_zoom_at_center);
-	void _uv_input(const Ref<InputEvent> &p_input);
-	void _uv_draw();
+	void _canvas_input(const Ref<InputEvent> &p_input);
+	void _canvas_draw();
 	void _set_action(int p_mode);
 
 	void _set_use_snap(bool p_use);
