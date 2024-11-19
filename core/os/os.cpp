@@ -59,9 +59,8 @@ OS *OS::get_singleton() {
 static void _error_handler(void *p_this, const char *p_func, const char *p_file, int p_line, const char *p_error, const char *p_errorexp, bool p_editor_notify, ErrorHandlerType p_type) {
 	OS *os = static_cast<OS *>(p_this);
 
-	// If the error isn't a warning and failing on errors is enabled,
-	// propagate the error.
-	if (p_type != ERR_HANDLER_WARNING && os->is_fail_on_error()) {
+	// If the error isn't a warning, propagate it.
+	if (p_type != ERR_HANDLER_WARNING) {
 		os->set_error_occurred(true);
 	}
 }
@@ -231,9 +230,9 @@ bool OS::is_error_occurred() const {
 void OS::set_error_occurred(bool p_occurred) {
 	_error_occurred = p_occurred;
 
-	// If an error has occurred, change the exit code to a failure (if it
-	// isn't already).
-	if (_error_occurred && _exit_code == EXIT_SUCCESS) {
+	// If an error has occurred and fail on error is enabled, change the
+	// exit code to a failure (if it isn't already).
+	if (_error_occurred && _fail_on_error && _exit_code == EXIT_SUCCESS) {
 		_exit_code = EXIT_FAILURE;
 	}
 }

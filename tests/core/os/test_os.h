@@ -218,29 +218,38 @@ TEST_CASE("[OS] Fail on error") {
 	OS::get_singleton()->set_stderr_enabled(false);
 
 	// Test with fail on error disabled.
-	ERR_PRINT("test error");
+	WARN_PRINT("test warning");
 	CHECK_MESSAGE(
 			!OS::get_singleton()->is_error_occurred(),
-			"An error should not occur when fail on error is disabled.");
+			"An error should not occur for a warning message.");
+	CHECK_MESSAGE(
+			OS::get_singleton()->get_exit_code() == EXIT_SUCCESS,
+			"The exit code should be 0 for a warning message.");
+
+	ERR_PRINT("test error");
+	CHECK_MESSAGE(
+			OS::get_singleton()->is_error_occurred(),
+			"An error should occur for an error message.");
 	CHECK_MESSAGE(
 			OS::get_singleton()->get_exit_code() == EXIT_SUCCESS,
 			"The exit code should be 0 when fail on error is disabled.");
 
-	// Enable fail on error.
+	// Clear the error and enable fail on error.
+	OS::get_singleton()->set_error_occurred(false);
 	OS::get_singleton()->set_fail_on_error(true);
 
 	WARN_PRINT("test warning");
 	CHECK_MESSAGE(
 			!OS::get_singleton()->is_error_occurred(),
-			"An error should not occur for a warning.");
+			"An error should not occur for a warning message.");
 	CHECK_MESSAGE(
 			OS::get_singleton()->get_exit_code() == EXIT_SUCCESS,
-			"The exit code should be 0 for a warning.");
+			"The exit code should be 0 for a warning message.");
 
 	ERR_PRINT("test error");
 	CHECK_MESSAGE(
 			OS::get_singleton()->is_error_occurred(),
-			"An error should occur when fail on error is enabled.");
+			"An error should occur for an error message.");
 	CHECK_MESSAGE(
 			OS::get_singleton()->get_exit_code() != EXIT_SUCCESS,
 			"The exit code should not be 0 when fail on error is enabled.");
