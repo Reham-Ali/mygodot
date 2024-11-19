@@ -76,6 +76,9 @@ void Polygon2DEditor::_set_node(Node *p_polygon) {
 		EditorNode::get_bottom_panel()->make_item_visible(polygon_edit);
 		_update_bone_list();
 		_update_available_modes();
+		if (current_mode == MODE_MAX) {
+			_select_mode(MODE_POINTS); // Initialize when opening the first time.
+		}
 		get_tree()->connect("process_frame", callable_mp(this, &Polygon2DEditor::_center_view), CONNECT_ONE_SHOT);
 		// Whenever polygon gets redrawn, there's possible changes for the editor as well.
 		node->connect("draw", callable_mp(draw, &CanvasItem::queue_redraw));
@@ -138,9 +141,12 @@ void Polygon2DEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			if (polygon_edit->is_inside_tree()) {
+			if (!is_visible() && polygon_edit->is_inside_tree()) {
 				EditorNode::get_bottom_panel()->remove_item(polygon_edit);
 			}
+		} break;
+		case NOTIFICATION_PREDELETE: {
+			polygon_edit->queue_free();
 		} break;
 	}
 }
@@ -243,67 +249,45 @@ void Polygon2DEditor::_bone_paint_selected(int p_index) {
 void Polygon2DEditor::_select_mode(int p_mode) {
 	current_mode = Mode(p_mode);
 	mode_buttons[current_mode]->set_pressed(true);
+	for (int i = 0; i < ACTION_MAX; i++) {
+		action_buttons[i]->hide();
+	}
+	bone_scroll_main_vb->hide();
+	bone_paint_strength->hide();
+	bone_paint_radius->hide();
+	bone_paint_radius_label->hide();
 	switch (current_mode) {
 		case MODE_POINTS: {
-			for (int i = 0; i <= ACTION_SCALE; i++) {
-				action_buttons[i]->show();
-			}
-			action_buttons[ACTION_ADD_POLYGON]->hide();
-			action_buttons[ACTION_REMOVE_POLYGON]->hide();
-			action_buttons[ACTION_PAINT_WEIGHT]->hide();
-			action_buttons[ACTION_CLEAR_WEIGHT]->hide();
+			action_buttons[ACTION_CREATE]->show();
+			action_buttons[ACTION_CREATE_INTERNAL]->show();
+			action_buttons[ACTION_REMOVE_INTERNAL]->show();
+			action_buttons[ACTION_EDIT_POINT]->show();
+			action_buttons[ACTION_MOVE]->show();
+			action_buttons[ACTION_ROTATE]->show();
+			action_buttons[ACTION_SCALE]->show();
+
 			if (node->get_polygon().is_empty()) {
 				_set_action(ACTION_CREATE);
 			} else {
 				_set_action(ACTION_EDIT_POINT);
 			}
-
-			bone_scroll_main_vb->hide();
-			bone_paint_strength->hide();
-			bone_paint_radius->hide();
-			bone_paint_radius_label->hide();
 		} break;
 		case MODE_POLYGONS: {
-			for (int i = 0; i <= ACTION_SCALE; i++) {
-				action_buttons[i]->hide();
-			}
 			action_buttons[ACTION_ADD_POLYGON]->show();
 			action_buttons[ACTION_REMOVE_POLYGON]->show();
-			action_buttons[ACTION_PAINT_WEIGHT]->hide();
-			action_buttons[ACTION_CLEAR_WEIGHT]->hide();
 			_set_action(ACTION_ADD_POLYGON);
-
-			bone_scroll_main_vb->hide();
-			bone_paint_strength->hide();
-			bone_paint_radius->hide();
-			bone_paint_radius_label->hide();
 		} break;
 		case MODE_UV: {
 			if (node->get_uv().size() != node->get_polygon().size()) {
 				_edit_menu_option(MENU_POLYGON_TO_UV);
 			}
-
-			action_buttons[ACTION_CREATE]->hide();
-			action_buttons[ACTION_CREATE_INTERNAL]->hide();
-			action_buttons[ACTION_REMOVE_INTERNAL]->hide();
-			for (int i = ACTION_EDIT_POINT; i <= ACTION_SCALE; i++) {
-				action_buttons[i]->show();
-			}
-			action_buttons[ACTION_ADD_POLYGON]->hide();
-			action_buttons[ACTION_REMOVE_POLYGON]->hide();
-			action_buttons[ACTION_PAINT_WEIGHT]->hide();
-			action_buttons[ACTION_CLEAR_WEIGHT]->hide();
+			action_buttons[ACTION_EDIT_POINT]->show();
+			action_buttons[ACTION_MOVE]->show();
+			action_buttons[ACTION_ROTATE]->show();
+			action_buttons[ACTION_SCALE]->show();
 			_set_action(ACTION_EDIT_POINT);
-
-			bone_scroll_main_vb->hide();
-			bone_paint_strength->hide();
-			bone_paint_radius->hide();
-			bone_paint_radius_label->hide();
 		} break;
 		case MODE_WEIGHTS: {
-			for (int i = 0; i <= ACTION_REMOVE_POLYGON; i++) {
-				action_buttons[i]->hide();
-			}
 			action_buttons[ACTION_PAINT_WEIGHT]->show();
 			action_buttons[ACTION_CLEAR_WEIGHT]->show();
 			_set_action(ACTION_PAINT_WEIGHT);
@@ -1278,31 +1262,30 @@ Polygon2DEditor::Polygon2DEditor() {
 
 	selected_action = ACTION_EDIT_POINT;
 	polygon_edit = memnew(VBoxContainer);
-	HBoxContainer *uv_mode_hb = memnew(HBoxContainer);
+	HBoxContainer *toolbar = memnew(HBoxContainer);
 
 	Ref<ButtonGroup> mode_button_group;
 	mode_button_group.instantiate();
 	for (int i = 0; i < MODE_MAX; i++) {
 		mode_buttons[i] = memnew(Button);
-		uv_mode_hb->add_child(mode_buttons[i]);
+		toolbar->add_child(mode_buttons[i]);
 		mode_buttons[i]->set_toggle_mode(true);
 		mode_buttons[i]->set_button_group(mode_button_group);
 		mode_buttons[i]->connect(SceneStringName(pressed), callable_mp(this, &Polygon2DEditor::_select_mode).bind(i));
 	}
 	mode_buttons[MODE_POINTS]->set_text(TTR("Points"));
-	mode_buttons[MODE_POINTS]->set_pressed(true);
 	mode_buttons[MODE_POLYGONS]->set_text(TTR("Polygons"));
 	mode_buttons[MODE_UV]->set_text(TTR("UV"));
 	mode_buttons[MODE_WEIGHTS]->set_text(TTR("Bones"));
 
-	uv_mode_hb->add_child(memnew(VSeparator));
+	toolbar->add_child(memnew(VSeparator));
 
-	polygon_edit->add_child(uv_mode_hb);
+	polygon_edit->add_child(toolbar);
 	for (int i = 0; i < ACTION_MAX; i++) {
 		action_buttons[i] = memnew(Button);
 		action_buttons[i]->set_theme_type_variation("FlatButton");
 		action_buttons[i]->set_toggle_mode(true);
-		uv_mode_hb->add_child(action_buttons[i]);
+		toolbar->add_child(action_buttons[i]);
 		action_buttons[i]->connect(SceneStringName(pressed), callable_mp(this, &Polygon2DEditor::_set_action).bind(i));
 		action_buttons[i]->set_focus_mode(FOCUS_NONE);
 	}
@@ -1321,17 +1304,8 @@ Polygon2DEditor::Polygon2DEditor() {
 	action_buttons[ACTION_PAINT_WEIGHT]->set_tooltip_text(TTR("Paint weights with specified intensity."));
 	action_buttons[ACTION_CLEAR_WEIGHT]->set_tooltip_text(TTR("Unpaint weights with specified intensity."));
 
-	action_buttons[ACTION_CREATE]->hide();
-	action_buttons[ACTION_CREATE_INTERNAL]->hide();
-	action_buttons[ACTION_REMOVE_INTERNAL]->hide();
-	action_buttons[ACTION_ADD_POLYGON]->hide();
-	action_buttons[ACTION_REMOVE_POLYGON]->hide();
-	action_buttons[ACTION_PAINT_WEIGHT]->hide();
-	action_buttons[ACTION_CLEAR_WEIGHT]->hide();
-	action_buttons[ACTION_EDIT_POINT]->set_pressed(true);
-
 	bone_paint_strength = memnew(HSlider);
-	uv_mode_hb->add_child(bone_paint_strength);
+	toolbar->add_child(bone_paint_strength);
 	bone_paint_strength->set_custom_minimum_size(Size2(75 * EDSCALE, 0));
 	bone_paint_strength->set_v_size_flags(SIZE_SHRINK_CENTER);
 	bone_paint_strength->set_min(0);
@@ -1340,13 +1314,10 @@ Polygon2DEditor::Polygon2DEditor() {
 	bone_paint_strength->set_value(0.5);
 
 	bone_paint_radius_label = memnew(Label(TTR("Radius:")));
-	uv_mode_hb->add_child(bone_paint_radius_label);
+	toolbar->add_child(bone_paint_radius_label);
 	bone_paint_radius = memnew(SpinBox);
-	uv_mode_hb->add_child(bone_paint_radius);
+	toolbar->add_child(bone_paint_radius);
 
-	bone_paint_strength->hide();
-	bone_paint_radius->hide();
-	bone_paint_radius_label->hide();
 	bone_paint_radius->set_min(1);
 	bone_paint_radius->set_max(100);
 	bone_paint_radius->set_step(1);
@@ -1370,11 +1341,11 @@ Polygon2DEditor::Polygon2DEditor() {
 	canvas->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 
 	Control *space = memnew(Control);
-	uv_mode_hb->add_child(space);
+	toolbar->add_child(space);
 	space->set_h_size_flags(SIZE_EXPAND_FILL);
 
 	edit_menu = memnew(MenuButton);
-	uv_mode_hb->add_child(edit_menu);
+	toolbar->add_child(edit_menu);
 	edit_menu->set_flat(false);
 	edit_menu->set_theme_type_variation("FlatMenuButton");
 	edit_menu->set_text(TTR("Edit"));
@@ -1386,11 +1357,11 @@ Polygon2DEditor::Polygon2DEditor() {
 	edit_menu->get_popup()->add_item(TTR("Grid Settings"), MENU_GRID_SETTINGS);
 	edit_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &Polygon2DEditor::_edit_menu_option));
 
-	uv_mode_hb->add_child(memnew(VSeparator));
+	toolbar->add_child(memnew(VSeparator));
 
 	b_snap_enable = memnew(Button);
 	b_snap_enable->set_theme_type_variation("FlatButton");
-	uv_mode_hb->add_child(b_snap_enable);
+	toolbar->add_child(b_snap_enable);
 	b_snap_enable->set_text(TTR("Snap"));
 	b_snap_enable->set_focus_mode(FOCUS_NONE);
 	b_snap_enable->set_toggle_mode(true);
@@ -1400,7 +1371,7 @@ Polygon2DEditor::Polygon2DEditor() {
 
 	b_snap_grid = memnew(Button);
 	b_snap_grid->set_theme_type_variation("FlatButton");
-	uv_mode_hb->add_child(b_snap_grid);
+	toolbar->add_child(b_snap_grid);
 	b_snap_grid->set_text(TTR("Grid"));
 	b_snap_grid->set_focus_mode(FOCUS_NONE);
 	b_snap_grid->set_toggle_mode(true);
@@ -1466,7 +1437,6 @@ Polygon2DEditor::Polygon2DEditor() {
 	hscroll->connect(SceneStringName(value_changed), callable_mp(this, &Polygon2DEditor::_update_zoom_and_pan).unbind(1).bind(false));
 
 	bone_scroll_main_vb = memnew(VBoxContainer);
-	bone_scroll_main_vb->hide();
 	bone_scroll_main_vb->set_custom_minimum_size(Size2(150 * EDSCALE, 0));
 	sync_bones = memnew(Button(TTR("Sync Bones to Polygon")));
 	bone_scroll_main_vb->add_child(sync_bones);
@@ -1493,6 +1463,7 @@ Polygon2DEditor::Polygon2DEditor() {
 	is_dragging = false;
 	is_creating = false;
 	bone_painting = false;
+	current_mode = MODE_MAX; // Uninitialized.
 
 	error = memnew(AcceptDialog);
 	add_child(error);
