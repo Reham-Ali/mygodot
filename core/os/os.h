@@ -84,7 +84,7 @@ class OS {
 	HashMap<Pair<String, String>, uint64_t, PairHash<String, String>> benchmark_marks_from;
 	HashMap<Pair<String, String>, double, PairHash<String, String>> benchmark_marks_final;
 
-	// Error handling
+	// Error handling.
 	bool _error_occurred = false;
 	bool _fail_on_error = false;
 
