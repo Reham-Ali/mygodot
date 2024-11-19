@@ -947,7 +947,7 @@ void EditorExportPlatformAndroid::_get_permissions(const Ref<EditorExportPreset>
 	}
 }
 
-void EditorExportPlatformAndroid::_write_tmp_manifest(const Ref<EditorExportPreset> &p_preset, bool p_give_internet, bool p_debug) {
+void EditorExportPlatformAndroid::_write_tmp_manifest(const Ref<EditorExportPreset> &p_preset, bool p_give_internet, bool p_debug, bool p_monochrome_icon) {
 	print_verbose("Building temporary manifest...");
 	String manifest_text =
 			"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -984,7 +984,7 @@ void EditorExportPlatformAndroid::_write_tmp_manifest(const Ref<EditorExportPres
 		}
 	}
 
-	manifest_text += _get_application_tag(Ref<EditorExportPlatform>(this), p_preset, _has_read_write_storage_permission(perms), p_debug);
+	manifest_text += _get_application_tag(Ref<EditorExportPlatform>(this), p_preset, _has_read_write_storage_permission(perms), p_debug, p_monochrome_icon);
 	manifest_text += "</manifest>\n";
 	String manifest_path = ExportTemplateManager::get_android_build_directory(p_preset).path_join(vformat("src/%s/AndroidManifest.xml", (p_debug ? "debug" : "release")));
 
@@ -992,7 +992,7 @@ void EditorExportPlatformAndroid::_write_tmp_manifest(const Ref<EditorExportPres
 	store_string_at_path(manifest_path, manifest_text);
 }
 
-void EditorExportPlatformAndroid::_fix_manifest(const Ref<EditorExportPreset> &p_preset, Vector<uint8_t> &p_manifest, bool p_give_internet) {
+void EditorExportPlatformAndroid::_fix_manifest(const Ref<EditorExportPreset> &p_preset, Vector<uint8_t> &p_manifest, bool p_give_internet, bool p_monochrome_icon) {
 	// Leaving the unused types commented because looking these constants up
 	// again later would be annoying
 	// const int CHUNK_AXML_FILE = 0x00080003;
@@ -1151,6 +1151,16 @@ void EditorExportPlatformAndroid::_fix_manifest(const Ref<EditorExportPreset> &p
 
 					if (tname == "activity" && attrname == "resizeableActivity") {
 						encode_uint32(is_resizeable, &p_manifest.write[iofs + 16]);
+					}
+
+					if (tname == "activity-alias" && attrname == "enabled") {
+						if (attr_resid != 0x00000000) {
+							// Activity alias for Default Icons
+							encode_uint32(!p_monochrome_icon, &p_manifest.write[iofs + 16]);
+						} else {
+							// Activity alias for Themed Icons, it is initially false.
+							encode_uint32(p_monochrome_icon, &p_manifest.write[iofs + 16]);
+						}
 					}
 
 					if (tname == "provider" && attrname == "authorities") {
@@ -1698,7 +1708,7 @@ void EditorExportPlatformAndroid::load_icon_refs(const Ref<EditorExportPreset> &
 	path = static_cast<String>(p_preset->get(launcher_adaptive_icon_monochrome_option)).strip_edges();
 	if (!path.is_empty()) {
 		print_verbose("Loading adaptive monochrome icon from " + path);
-		ImageLoader::load_image(path, background);
+		ImageLoader::load_image(path, monochrome);
 	}
 }
 
@@ -3080,6 +3090,8 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 
 	load_icon_refs(p_preset, main_image, foreground, background, monochrome);
 
+	bool p_monochrome_icon = (monochrome.is_valid() && !monochrome->is_empty());
+
 	Vector<uint8_t> command_line_flags;
 	// Write command line flags into the command_line_flags variable.
 	get_command_line_flags(p_preset, p_path, p_flags, command_line_flags);
@@ -3151,7 +3163,7 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 		// Copies the project icon files into the appropriate Gradle project directory.
 		_copy_icons_to_gradle_project(p_preset, main_image, foreground, background, monochrome);
 		// Write an AndroidManifest.xml file into the Gradle project directory.
-		_write_tmp_manifest(p_preset, p_give_internet, p_debug);
+		_write_tmp_manifest(p_preset, p_give_internet, p_debug, p_monochrome_icon);
 
 		//stores all the project files inside the Gradle project directory. Also includes all ABIs
 		_clear_assets_directory(p_preset);
@@ -3468,7 +3480,7 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 
 		//write
 		if (file == "AndroidManifest.xml") {
-			_fix_manifest(p_preset, data, p_give_internet);
+			_fix_manifest(p_preset, data, p_give_internet, p_monochrome_icon);
 		}
 		if (file == "resources.arsc") {
 			_fix_resources(p_preset, data);
