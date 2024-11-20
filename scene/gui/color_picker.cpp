@@ -1484,7 +1484,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			color_change_vector.y += 1;
 		}
 
-		if (!Math::is_zero_approx(color_change_vector.length_squared())) {
+		if (!color_change_vector.is_zero_approx()) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
 				v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
