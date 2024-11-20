@@ -91,7 +91,7 @@
 			Volume of sound, in decibels. This is an offset of the [member stream]'s volume.
 			[b]Note:[/b] To convert between decibel and linear energy (like most volume sliders do), use [member volume_linear], or [method @GlobalScope.db_to_linear] and [method @GlobalScope.linear_to_db].
 		</member>
-		<member name="volume_linear" type="float" setter="set_volume_linear" getter="get_volume_linear" default="1.0">
+		<member name="volume_linear" type="float" setter="set_volume_linear" getter="get_volume_linear">
 			Volume of sound, as a linear value.
 			[b]Note:[/b] This member modifies [member volume_db] for convenience. The value it returns is equivalent to the result of [method @GlobalScope.db_to_linear] on [member volume_db]. Likewise, setting this member is equivalent to setting [member volume_db] to the result of [method @GlobalScope.linear_to_db] on a value.
 		</member>
