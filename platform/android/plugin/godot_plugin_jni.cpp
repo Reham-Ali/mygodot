@@ -33,7 +33,6 @@
 #include "api/java_class_wrapper.h"
 #include "api/jni_singleton.h"
 #include "jni_utils.h"
-#include "string_android.h"
 
 #include "core/config/engine.h"
 #include "core/error/error_macros.h"
