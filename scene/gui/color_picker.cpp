@@ -1472,8 +1472,8 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 	Ref<InputEventJoypadMotion> jmev = p_event;
 
 	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
-		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
-		Vector2 color_change_vector = Vector2();
+		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit.
+		Vector2 color_change_vector;
 		if (p_event->is_action_pressed("ui_left", true)) {
 			color_change_vector.x -= 1;
 		} else if (p_event->is_action_pressed("ui_right", true)) {
@@ -1484,15 +1484,15 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 			color_change_vector.y += 1;
 		}
 
-		if (!Math::is_zero_approx(color_change_vector.length())) {
+		if (!Math::is_zero_approx(color_change_vector.length_squared())) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
 				s = CLAMP(s + color_change_vector.x / 100.0, 0, 1);
 				v = CLAMP(v - color_change_vector.y / 100.0, 0, 1);
 			} else if (actual_shape == SHAPE_VHS_CIRCLE || actual_shape == SHAPE_OKHSL_CIRCLE) {
 				Vector2 center = c->get_size() / 2.0;
 
-				// TODO: It's a hack, as it messes up if I calculate it this way always
-				if (hsv_keyboard_picker_cursor_position.x == 0 && hsv_keyboard_picker_cursor_position.y == 0) {
+				// HACK: It's a hack, as it messes up if I calculate it this way always.
+				if (hsv_keyboard_picker_cursor_position == Vector2i()) {
 					hsv_keyboard_picker_cursor_position.x = center.x + (center.x * Math::cos(h * Math_TAU) * s);
 					hsv_keyboard_picker_cursor_position.y = center.y + (center.y * Math::sin(h * Math_TAU) * s);
 				}
@@ -1603,8 +1603,7 @@ void ColorPicker::_w_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventJoypadMotion> jmev = p_event;
 
 	if (kev.is_valid() || jbev.is_valid() || jmev.is_valid()) {
-		// TODO: It should be done in process instead of input to handle joypads better
-		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit
+		// TODO: Consider adding new ui actions specific to ColorPicker, like the ones used for LineEdit.
 		float color_change = Input::get_singleton()->get_axis("ui_up", "ui_down");
 		if (!Math::is_zero_approx(color_change)) {
 			if (actual_shape == SHAPE_HSV_RECTANGLE) {
@@ -2143,7 +2142,7 @@ ColorPicker::ColorPicker() {
 	wheel->set_mouse_filter(MOUSE_FILTER_PASS);
 	wheel->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(2, wheel));
 
-	// TODO: Hack - I cannot draw focus stylebox on wheel itself, as it's drawing based on shader
+	// HACK: I cannot draw focus stylebox on wheel itself, as it's drawing based on shader.
 	wheel_h_focus_display = memnew(Control);
 	wheel_margin->add_child(wheel_h_focus_display);
 	wheel_h_focus_display->set_mouse_filter(MOUSE_FILTER_PASS);
