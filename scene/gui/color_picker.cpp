@@ -1513,7 +1513,7 @@ void ColorPicker::_uv_input(const Ref<InputEvent> &p_event, Control *c) {
 				} else if (c == wheel_h_focus_display) {
 					int h_change = 0;
 
-					if (Math::is_equal_approx(h, 0) || Math::is_equal_approx(h, 0.5f) || Math::is_equal_approx(h, 1)) {
+					if (Math::is_zero_approx(h) || Math::is_equal_approx(h, 0.5f) || Math::is_equal_approx(h, 1)) {
 						color_change_vector.x = 0;
 					} else if (Math::is_equal_approx(h, 0.25f) || Math::is_equal_approx(h, 0.75f)) {
 						color_change_vector.y = 0;
@@ -2142,7 +2142,7 @@ ColorPicker::ColorPicker() {
 	wheel->set_mouse_filter(MOUSE_FILTER_PASS);
 	wheel->connect(SceneStringName(draw), callable_mp(this, &ColorPicker::_hsv_draw).bind(2, wheel));
 
-	// HACK: I cannot draw focus stylebox on wheel itself, as it's drawing based on shader.
+	// HACK: I cannot draw focus stylebox on the wheel itself, as it's drawing based on shader.
 	wheel_h_focus_display = memnew(Control);
 	wheel_margin->add_child(wheel_h_focus_display);
 	wheel_h_focus_display->set_mouse_filter(MOUSE_FILTER_PASS);
