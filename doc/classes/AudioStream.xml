@@ -45,6 +45,13 @@
 				Override this method to customize the name assigned to this audio stream. Unused by the engine.
 			</description>
 		</method>
+		<method name="_get_tags" qualifiers="virtual const">
+			<return type="Dictionary" />
+			<description>
+				Override this method to customize the tags for this audio stream. Should return a [Dictionary] of strings with the tag as the key and its content as the value.
+				Common tags include information like the artist, the song title, and the album.
+			</description>
+		</method>
 		<method name="_instantiate_playback" qualifiers="virtual const">
 			<return type="AudioStreamPlayback" />
 			<description>

@@ -41,5 +41,8 @@
 		<member name="packet_sequence" type="OggPacketSequence" setter="set_packet_sequence" getter="get_packet_sequence">
 			Contains the raw Ogg data for this stream.
 		</member>
+		<member name="tags" type="Dictionary" setter="set_tags" getter="get_tags" default="{}">
+			Contains user defined tags if found in the Ogg Vorbis data.
+		</member>
 	</members>
 </class>
