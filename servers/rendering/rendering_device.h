@@ -384,7 +384,7 @@ public:
 		Vector<int32_t> resolve_attachments;
 		Vector<int32_t> preserve_attachments;
 		int32_t depth_attachment = ATTACHMENT_UNUSED;
-		int32_t vrs_attachment = ATTACHMENT_UNUSED; // density map for VRS, only used if supported
+		int32_t fragment_shading_rate_attachment = ATTACHMENT_UNUSED;
 	};
 
 	typedef int64_t FramebufferFormatID;
@@ -394,8 +394,13 @@ private:
 		Vector<AttachmentFormat> attachments;
 		Vector<FramebufferPass> passes;
 		uint32_t view_count = 1;
+		int32_t fragment_density_map_attachment = ATTACHMENT_UNUSED;
 
 		bool operator<(const FramebufferFormatKey &p_key) const {
+			if (fragment_density_map_attachment != p_key.fragment_density_map_attachment) {
+				return fragment_density_map_attachment < p_key.fragment_density_map_attachment;
+			}
+
 			if (view_count != p_key.view_count) {
 				return view_count < p_key.view_count;
 			}
@@ -500,7 +505,7 @@ private:
 		}
 	};
 
-	static RDD::RenderPassID _render_pass_create(RenderingDeviceDriver *p_driver, const Vector<AttachmentFormat> &p_attachments, const Vector<FramebufferPass> &p_passes, VectorView<RDD::AttachmentLoadOp> p_load_ops, VectorView<RDD::AttachmentStoreOp> p_store_ops, uint32_t p_view_count = 1, Vector<TextureSamples> *r_samples = nullptr);
+	static RDD::RenderPassID _render_pass_create(RenderingDeviceDriver *p_driver, const Vector<AttachmentFormat> &p_attachments, const Vector<FramebufferPass> &p_passes, VectorView<RDD::AttachmentLoadOp> p_load_ops, VectorView<RDD::AttachmentStoreOp> p_store_ops, uint32_t p_view_count = 1, int32_t p_fragment_density_map_attachment = -1, Vector<TextureSamples> *r_samples = nullptr);
 	static RDD::RenderPassID _render_pass_create_from_graph(RenderingDeviceDriver *p_driver, VectorView<RDD::AttachmentLoadOp> p_load_ops, VectorView<RDD::AttachmentStoreOp> p_store_ops, void *p_user_data);
 
 	// This is a cache and it's never freed, it ensures
@@ -511,6 +516,7 @@ private:
 		RDD::RenderPassID render_pass; // Here for constructing shaders, never used, see section (7.2. Render Pass Compatibility from Vulkan spec).
 		Vector<TextureSamples> pass_samples;
 		uint32_t view_count = 1; // Number of views.
+		int32_t fragment_density_map_attachment = -1;
 	};
 
 	HashMap<FramebufferFormatID, FramebufferFormat> framebuffer_formats;
@@ -525,14 +531,15 @@ private:
 		RDG::FramebufferCache *framebuffer_cache = nullptr;
 		Size2 size;
 		uint32_t view_count;
+		int32_t fragment_density_map_attachment = -1;
 	};
 
 	RID_Owner<Framebuffer, true> framebuffer_owner;
 
 public:
 	// This ID is warranted to be unique for the same formats, does not need to be freed
-	FramebufferFormatID framebuffer_format_create(const Vector<AttachmentFormat> &p_format, uint32_t p_view_count = 1);
-	FramebufferFormatID framebuffer_format_create_multipass(const Vector<AttachmentFormat> &p_attachments, const Vector<FramebufferPass> &p_passes, uint32_t p_view_count = 1);
+	FramebufferFormatID framebuffer_format_create(const Vector<AttachmentFormat> &p_format, uint32_t p_view_count = 1, int32_t p_fragment_density_map_attachment = -1);
+	FramebufferFormatID framebuffer_format_create_multipass(const Vector<AttachmentFormat> &p_attachments, const Vector<FramebufferPass> &p_passes, uint32_t p_view_count = 1, int32_t p_fragment_density_map_attachment = -1);
 	FramebufferFormatID framebuffer_format_create_empty(TextureSamples p_samples = TEXTURE_SAMPLES_1);
 	TextureSamples framebuffer_format_get_texture_samples(FramebufferFormatID p_format, uint32_t p_pass = 0);
 

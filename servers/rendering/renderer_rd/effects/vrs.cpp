@@ -44,6 +44,8 @@ VRS::VRS() {
 		Vector<String> vrs_modes;
 		vrs_modes.push_back("\n"); // VRS_DEFAULT
 		vrs_modes.push_back("\n#define USE_MULTIVIEW\n"); // VRS_MULTIVIEW
+		vrs_modes.push_back("\n#define SPLIT_RG\n"); // VRS_RG
+		vrs_modes.push_back("\n#define SPLIT_RG\n#define USE_MULTIVIEW\n"); // VRS_RG_MULTIVIEW
 
 		vrs_shader.shader.initialize(vrs_modes);
 
@@ -80,15 +82,19 @@ void VRS::copy_vrs(RID p_source_rd_texture, RID p_dest_framebuffer, bool p_multi
 
 	RD::Uniform u_source_rd_texture(RD::UNIFORM_TYPE_SAMPLER_WITH_TEXTURE, 0, Vector<RID>({ default_sampler, p_source_rd_texture }));
 
+	int mode = 0;
 	VRSPushConstant push_constant = {};
-
-	int mode = p_multiview ? VRS_MULTIVIEW : VRS_DEFAULT;
-
-	// Set maximum texel factor based on maximum fragment size, some GPUs do not support 8x8 (fragment shading rate approach).
-	if (MIN(RD::get_singleton()->limit_get(RD::LIMIT_VRS_MAX_FRAGMENT_WIDTH), RD::get_singleton()->limit_get(RD::LIMIT_VRS_MAX_FRAGMENT_HEIGHT)) > 4) {
-		push_constant.max_texel_factor = 3.0;
+	if (RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP)) {
+		mode = p_multiview ? VRS_RG_MULTIVIEW : VRS_RG;
 	} else {
-		push_constant.max_texel_factor = 2.0;
+		mode = p_multiview ? VRS_MULTIVIEW : VRS_DEFAULT;
+
+		// Set maximum texel factor based on maximum fragment size, some GPUs do not support 8x8 (fragment shading rate approach).
+		if (MIN(RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_MAX_FRAGMENT_WIDTH), RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_MAX_FRAGMENT_HEIGHT)) > 4) {
+			push_constant.max_texel_factor = 3.0;
+		} else {
+			push_constant.max_texel_factor = 2.0;
+		}
 	}
 
 	RID shader = vrs_shader.shader.version_get_shader(vrs_shader.shader_version, mode);
@@ -103,8 +109,16 @@ void VRS::copy_vrs(RID p_source_rd_texture, RID p_dest_framebuffer, bool p_multi
 }
 
 Size2i VRS::get_vrs_texture_size(const Size2i p_base_size) const {
-	int32_t texel_width = RD::get_singleton()->limit_get(RD::LIMIT_VRS_TEXEL_WIDTH);
-	int32_t texel_height = RD::get_singleton()->limit_get(RD::LIMIT_VRS_TEXEL_HEIGHT);
+	int32_t texel_width = 0;
+	int32_t texel_height = 0;
+	if (RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP)) {
+		const int32_t PreferredTexelSize = 32;
+		texel_width = CLAMP(PreferredTexelSize, RD::get_singleton()->limit_get(RD::LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_WIDTH), RD::get_singleton()->limit_get(RD::LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_WIDTH));
+		texel_height = CLAMP(PreferredTexelSize, RD::get_singleton()->limit_get(RD::LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_HEIGHT), RD::get_singleton()->limit_get(RD::LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_HEIGHT));
+	} else {
+		texel_width = RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_TEXEL_WIDTH);
+		texel_height = RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_TEXEL_HEIGHT);
+	}
 
 	int width = p_base_size.x / texel_width;
 	if (p_base_size.x % texel_width != 0) {

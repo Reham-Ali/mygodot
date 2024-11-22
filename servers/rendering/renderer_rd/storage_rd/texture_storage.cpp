@@ -482,9 +482,9 @@ TextureStorage::TextureStorage() {
 		tformat.format = RD::DATA_FORMAT_R8_UINT;
 		tformat.width = 4;
 		tformat.height = 4;
-		tformat.usage_bits = RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_STORAGE_BIT | RD::TEXTURE_USAGE_CAN_UPDATE_BIT | RD::TEXTURE_USAGE_VRS_ATTACHMENT_BIT;
+		tformat.usage_bits = RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_STORAGE_BIT | RD::TEXTURE_USAGE_CAN_UPDATE_BIT | RD::TEXTURE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT;
 		tformat.texture_type = RD::TEXTURE_TYPE_2D;
-		if (!RD::get_singleton()->has_feature(RD::SUPPORTS_ATTACHMENT_VRS)) {
+		if (!RD::get_singleton()->has_feature(RD::SUPPORTS_ATTACHMENT_FRAGMENT_SHADING_RATE)) {
 			tformat.usage_bits = RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_CAN_UPDATE_BIT;
 		}
 
@@ -498,6 +498,33 @@ TextureStorage::TextureStorage() {
 			Vector<Vector<uint8_t>> vpv;
 			vpv.push_back(pv);
 			default_rd_textures[DEFAULT_RD_TEXTURE_VRS] = RD::get_singleton()->texture_create(tformat, RD::TextureView(), vpv);
+		}
+	}
+
+	{
+		// Create default fragment density map.
+		RD::TextureFormat tformat;
+		tformat.format = RD::DATA_FORMAT_R8G8_UNORM;
+		tformat.width = 4;
+		tformat.height = 4;
+		tformat.usage_bits = RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT | RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_CAN_UPDATE_BIT;
+		tformat.texture_type = RD::TEXTURE_TYPE_2D;
+
+		if (RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP)) {
+			// Only request the usage bits if we know the feature is supported.
+			tformat.usage_bits |= RD::TEXTURE_USAGE_STORAGE_BIT | RD::TEXTURE_USAGE_FRAGMENT_DENSITY_MAP_BIT;
+		}
+
+		Vector<uint8_t> pv;
+		pv.resize(4 * 4);
+		for (int i = 0; i < 4 * 4; i++) {
+			pv.set(i, 0);
+		}
+
+		{
+			Vector<Vector<uint8_t>> vpv;
+			vpv.push_back(pv);
+			default_rd_textures[DEFAULT_RD_TEXTURE_FDM] = RD::get_singleton()->texture_create(tformat, RD::TextureView(), vpv);
 		}
 	}
 

@@ -76,16 +76,26 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 		String supported_operations_desc() const;
 	};
 
-	struct VRSCapabilities {
-		bool pipeline_vrs_supported = false; // We can specify our fragment rate on a pipeline level.
-		bool primitive_vrs_supported = false; // We can specify our fragment rate on each drawcall.
-		bool attachment_vrs_supported = false; // We can provide a density map attachment on our framebuffer.
+	struct FSRCapabilities {
+		bool pipeline_fsr_supported = false; // We can specify our fragment rate on a pipeline level.
+		bool primitive_fsr_supported = false; // We can specify our fragment rate on each drawcall.
+		bool attachment_fsr_supported = false; // We can provide a density map attachment on our framebuffer.
 
 		Size2i min_texel_size;
 		Size2i max_texel_size;
 		Size2i max_fragment_size;
 
 		Size2i texel_size; // The texel size we'll use
+	};
+
+	struct FDMCapabilities {
+		bool fragment_density_map = false;
+		bool fragment_density_map_dynamic = false;
+		bool fragment_density_map_non_submsampled_images = false;
+
+		Size2i min_fragment_density_texel_size;
+		Size2i max_fragment_density_texel_size;
+		bool fragment_density_invocations = false;
 	};
 
 	struct ShaderCapabilities {
@@ -135,7 +145,8 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 	RDD::Capabilities device_capabilities;
 	SubgroupCapabilities subgroup_capabilities;
 	MultiviewCapabilities multiview_capabilities;
-	VRSCapabilities vrs_capabilities;
+	FSRCapabilities fsr_capabilities;
+	FDMCapabilities fdm_capabilities;
 	ShaderCapabilities shader_capabilities;
 	StorageBufferCapabilities storage_buffer_capabilities;
 	bool pipeline_cache_control_support = false;
@@ -560,7 +571,7 @@ public:
 
 	// ----- SUBPASS -----
 
-	virtual RenderPassID render_pass_create(VectorView<Attachment> p_attachments, VectorView<Subpass> p_subpasses, VectorView<SubpassDependency> p_subpass_dependencies, uint32_t p_view_count) override final;
+	virtual RenderPassID render_pass_create(VectorView<Attachment> p_attachments, VectorView<Subpass> p_subpasses, VectorView<SubpassDependency> p_subpass_dependencies, uint32_t p_view_count, AttachmentReference p_fragment_density_map_attachment) override final;
 	virtual void render_pass_free(RenderPassID p_render_pass) override final;
 
 	// ----- COMMANDS -----

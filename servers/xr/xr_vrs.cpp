@@ -33,6 +33,10 @@
 #include "servers/rendering/renderer_scene_render.h"
 #include "servers/rendering_server.h"
 
+// TODO: This seems to give a result that matches more closely a circle, but is that actually what we want? To discuss and document with Baastian the formula behind the original computation.
+// I suspect we want the one that actually gives different values in each cardinal direction, but I'd like to find out the justification behind the formulas first.
+#define COMPUTE_DENSITY_WITH_DISTANCE 1
+
 void XRVRS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_vrs_min_radius"), &XRVRS::get_vrs_min_radius);
 	ClassDB::bind_method(D_METHOD("set_vrs_min_radius", "radius"), &XRVRS::set_vrs_min_radius);
@@ -91,10 +95,19 @@ void XRVRS::set_vrs_strength(float p_vrs_strength) {
 RID XRVRS::make_vrs_texture(const Size2 &p_target_size, const PackedVector2Array &p_eye_foci) {
 	ERR_FAIL_COND_V(p_eye_foci.is_empty(), RID());
 
-	int32_t texel_width = RD::get_singleton()->limit_get(RD::LIMIT_VRS_TEXEL_WIDTH);
-	int32_t texel_height = RD::get_singleton()->limit_get(RD::LIMIT_VRS_TEXEL_HEIGHT);
+	// TODO: How can we share this logic between the VRS effect and this? Discuss with Baastian how we can better implement this.
+	int32_t texel_width = 0;
+	int32_t texel_height = 0;
+	if (RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP)) {
+		const int32_t PreferredTexelSize = 32;
+		texel_width = CLAMP(PreferredTexelSize, RD::get_singleton()->limit_get(RD::LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_WIDTH), RD::get_singleton()->limit_get(RD::LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_WIDTH));
+		texel_height = CLAMP(PreferredTexelSize, RD::get_singleton()->limit_get(RD::LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_HEIGHT), RD::get_singleton()->limit_get(RD::LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_HEIGHT));
+	} else {
+		texel_width = RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_TEXEL_WIDTH);
+		texel_height = RD::get_singleton()->limit_get(RD::LIMIT_FRAGMENT_SHADING_RATE_TEXEL_HEIGHT);
+	}
 
-	// Should return sensible data or graphics API does not support VRS.
+	// Should return sensible data or graphics API does not support fragment shading rate.
 	ERR_FAIL_COND_V(texel_width < 1 || texel_height < 1, RID());
 
 	Size2 vrs_size = Size2(0.5 + p_target_size.x / texel_width, 0.5 + p_target_size.y / texel_height).round();
@@ -130,16 +143,24 @@ RID XRVRS::make_vrs_texture(const Size2 &p_target_size, const PackedVector2Array
 
 			Vector2i view_center;
 			view_center.x = int(vrs_size.x * (eye_foci[i].x + 1.0) * 0.5);
-			view_center.y = int(vrs_size.y * (eye_foci[i].y + 1.0) * 0.5);
+			view_center.y = int(vrs_size.y * (-eye_foci[i].y + 1.0) * 0.5);
 
 			int d = 0;
 			for (int y = 0; y < vrs_sizei.y; y++) {
 				for (int x = 0; x < vrs_sizei.x; x++) {
 					Vector2 offset = Vector2(x - view_center.x, y - view_center.y);
+
+					// TODO: See comment next to the #define for this so we can discuss whether we want both implementations here or not.
+#if COMPUTE_DENSITY_WITH_DISTANCE
+					real_t density = MAX(offset.length() - min_radius, 0.0) / outer_radius;
+					data_ptr[d++] = CLAMP(255.0 * density, 0, 255);
+					data_ptr[d++] = CLAMP(255.0 * density, 0, 255);
+#else
 					real_t density = 255.0 * MAX(0.0, (Math::abs(offset.x) - min_radius) / outer_radius);
 					data_ptr[d++] = MIN(255, density);
 					density = 255.0 * MAX(0.0, (Math::abs(offset.y) - min_radius) / outer_radius);
 					data_ptr[d++] = MIN(255, density);
+#endif
 				}
 			}
 			images.push_back(Image::create_from_data(vrs_sizei.x, vrs_sizei.y, false, Image::FORMAT_RG8, data));

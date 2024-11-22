@@ -172,6 +172,7 @@ RID RenderForwardMobile::RenderBufferDataForwardMobile::get_color_fbs(Framebuffe
 
 	uint32_t view_count = render_buffers->get_view_count();
 
+	bool vrs_uses_fdm = RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP);
 	RID vrs_texture;
 	if (render_buffers->has_texture(RB_SCOPE_VRS, RB_TEXTURE)) {
 		vrs_texture = render_buffers->get_texture(RB_SCOPE_VRS, RB_TEXTURE);
@@ -199,8 +200,8 @@ RID RenderForwardMobile::RenderBufferDataForwardMobile::get_color_fbs(Framebuffe
 			RD::FramebufferPass pass;
 			pass.color_attachments.push_back(0);
 			pass.depth_attachment = 1;
-			if (vrs_texture.is_valid()) {
-				pass.vrs_attachment = 2;
+			if (!vrs_uses_fdm && vrs_texture.is_valid()) {
+				pass.fragment_shading_rate_attachment = 2;
 			}
 
 			if (use_msaa) {
@@ -222,8 +223,8 @@ RID RenderForwardMobile::RenderBufferDataForwardMobile::get_color_fbs(Framebuffe
 			RD::FramebufferPass pass;
 			pass.color_attachments.push_back(0);
 			pass.depth_attachment = 1;
-			if (vrs_texture.is_valid()) {
-				pass.vrs_attachment = 2;
+			if (!vrs_uses_fdm && vrs_texture.is_valid()) {
+				pass.fragment_shading_rate_attachment = 2;
 			}
 
 			if (use_msaa) {
@@ -2864,8 +2865,9 @@ static RD::FramebufferFormatID _get_color_framebuffer_format_for_pipeline(RD::Da
 	pass.color_attachments.push_back(0);
 	pass.depth_attachment = 1;
 
-	if (p_vrs) {
-		pass.vrs_attachment = 2;
+	bool vrs_uses_fdm = RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP);
+	if (!vrs_uses_fdm && p_vrs) {
+		pass.fragment_shading_rate_attachment = 2;
 	}
 
 	if (multisampling) {
@@ -2893,7 +2895,7 @@ static RD::FramebufferFormatID _get_color_framebuffer_format_for_pipeline(RD::Da
 		passes.push_back(blit_pass);
 	}
 
-	return RD::get_singleton()->framebuffer_format_create_multipass(attachments, passes, p_view_count);
+	return RD::get_singleton()->framebuffer_format_create_multipass(attachments, passes, p_view_count, vrs_uses_fdm ? 2 : -1);
 }
 
 static RD::FramebufferFormatID _get_reflection_probe_color_framebuffer_format_for_pipeline() {
