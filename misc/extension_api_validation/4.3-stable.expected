@@ -129,3 +129,10 @@ GH-98972
 Validate extension JSON: Error: Field 'classes/TranslationServer/methods/standardize_locale/arguments': size changed value in new API, from 1 to 2.
 
 Optional argument added. Compatibility method registered.
+
+
+GH-99481
+--------
+Validate extension JSON: Error: Field 'classes/RichTextLabel/methods/push_meta/arguments': size changed value in new API, from 2 to 3.
+
+Optional argument added to set tooltip. Compatibility method registered.
