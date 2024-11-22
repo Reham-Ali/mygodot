@@ -228,7 +228,8 @@ public:
 		TEXTURE_LAYOUT_COPY_DST_OPTIMAL,
 		TEXTURE_LAYOUT_RESOLVE_SRC_OPTIMAL,
 		TEXTURE_LAYOUT_RESOLVE_DST_OPTIMAL,
-		TEXTURE_LAYOUT_VRS_ATTACHMENT_OPTIMAL,
+		TEXTURE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL,
+		TEXTURE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL,
 		TEXTURE_LAYOUT_MAX
 	};
 
@@ -599,7 +600,7 @@ public:
 		AttachmentReference depth_stencil_reference;
 		LocalVector<AttachmentReference> resolve_references;
 		LocalVector<uint32_t> preserve_attachments;
-		AttachmentReference vrs_reference;
+		AttachmentReference fragment_shading_rate_reference;
 	};
 
 	struct SubpassDependency {
@@ -611,7 +612,7 @@ public:
 		BitField<BarrierAccessBits> dst_access;
 	};
 
-	virtual RenderPassID render_pass_create(VectorView<Attachment> p_attachments, VectorView<Subpass> p_subpasses, VectorView<SubpassDependency> p_subpass_dependencies, uint32_t p_view_count) = 0;
+	virtual RenderPassID render_pass_create(VectorView<Attachment> p_attachments, VectorView<Subpass> p_subpasses, VectorView<SubpassDependency> p_subpass_dependencies, uint32_t p_view_count, AttachmentReference p_fragment_density_map_attachment) = 0;
 	virtual void render_pass_free(RenderPassID p_render_pass) = 0;
 
 	// ----- COMMANDS -----

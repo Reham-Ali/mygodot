@@ -59,7 +59,7 @@ class FramebufferCacheRD : public Object {
 
 	static _FORCE_INLINE_ uint32_t _hash_pass(const RD::FramebufferPass &p, uint32_t h) {
 		h = hash_murmur3_one_32(p.depth_attachment, h);
-		h = hash_murmur3_one_32(p.vrs_attachment, h);
+		h = hash_murmur3_one_32(p.fragment_shading_rate_attachment, h);
 
 		h = hash_murmur3_one_32(p.color_attachments.size(), h);
 		for (int i = 0; i < p.color_attachments.size(); i++) {
@@ -84,7 +84,7 @@ class FramebufferCacheRD : public Object {
 			return false;
 		}
 
-		if (a.vrs_attachment != b.vrs_attachment) {
+		if (a.fragment_shading_rate_attachment != b.fragment_shading_rate_attachment) {
 			return false;
 		}
 

@@ -646,7 +646,7 @@ void RendererSceneRenderRD::_render_buffers_post_process_and_tonemap(const Rende
 		if (use_intermediate_fb) {
 			// If we use FSR to upscale we need to write our result into an intermediate buffer.
 			// Note that this is cached so we only create the texture the first time.
-			RID dest_texture = rb->create_texture(SNAME("Tonemapper"), SNAME("destination"), _render_buffers_get_color_format(), RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_STORAGE_BIT | RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT);
+			RID dest_texture = rb->create_texture(SNAME("Tonemapper"), SNAME("destination"), _render_buffers_get_color_format(), RD::TEXTURE_USAGE_SAMPLING_BIT | RD::TEXTURE_USAGE_STORAGE_BIT | RD::TEXTURE_USAGE_COLOR_ATTACHMENT_BIT, RD::TEXTURE_SAMPLES_1, Size2i(), 0, 1, true, true);
 			dest_fb = FramebufferCacheRD::get_singleton()->get_cache(dest_texture);
 		} else {
 			// If we do a bilinear upscale we just render into our render target and our shader will upscale automatically.
@@ -1424,7 +1424,7 @@ void RendererSceneRenderRD::sdfgi_set_debug_probe_select(const Vector3 &p_positi
 RendererSceneRenderRD *RendererSceneRenderRD::singleton = nullptr;
 
 bool RendererSceneRenderRD::is_vrs_supported() const {
-	return RD::get_singleton()->has_feature(RD::SUPPORTS_ATTACHMENT_VRS);
+	return RD::get_singleton()->has_feature(RD::SUPPORTS_ATTACHMENT_FRAGMENT_SHADING_RATE) || RD::get_singleton()->has_feature(RD::SUPPORTS_FRAGMENT_DENSITY_MAP);
 }
 
 bool RendererSceneRenderRD::is_dynamic_gi_supported() const {

@@ -358,7 +358,8 @@ public:
 		TEXTURE_USAGE_CAN_COPY_FROM_BIT = (1 << 7),
 		TEXTURE_USAGE_CAN_COPY_TO_BIT = (1 << 8),
 		TEXTURE_USAGE_INPUT_ATTACHMENT_BIT = (1 << 9),
-		TEXTURE_USAGE_VRS_ATTACHMENT_BIT = (1 << 10),
+		TEXTURE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT = (1 << 10),
+		TEXTURE_USAGE_FRAGMENT_DENSITY_MAP_BIT = (1 << 11),
 	};
 
 	struct TextureFormat {
@@ -373,6 +374,7 @@ public:
 		uint32_t usage_bits = 0;
 		Vector<DataFormat> shareable_formats;
 		bool is_resolve_buffer = false;
+		bool is_discardable = false;
 
 		bool operator==(const TextureFormat &b) const {
 			if (format != b.format) {
@@ -394,6 +396,10 @@ public:
 			} else if (usage_bits != b.usage_bits) {
 				return false;
 			} else if (shareable_formats != b.shareable_formats) {
+				return false;
+			} else if (is_resolve_buffer != b.is_resolve_buffer) {
+				return false;
+			} else if (is_discardable != b.is_discardable) {
 				return false;
 			} else {
 				return true;
@@ -846,18 +852,23 @@ public:
 		LIMIT_SUBGROUP_MAX_SIZE,
 		LIMIT_SUBGROUP_IN_SHADERS, // Set flags using SHADER_STAGE_VERTEX_BIT, SHADER_STAGE_FRAGMENT_BIT, etc.
 		LIMIT_SUBGROUP_OPERATIONS,
-		LIMIT_VRS_TEXEL_WIDTH,
-		LIMIT_VRS_TEXEL_HEIGHT,
-		LIMIT_VRS_MAX_FRAGMENT_WIDTH,
-		LIMIT_VRS_MAX_FRAGMENT_HEIGHT,
+		LIMIT_FRAGMENT_SHADING_RATE_TEXEL_WIDTH,
+		LIMIT_FRAGMENT_SHADING_RATE_TEXEL_HEIGHT,
+		LIMIT_FRAGMENT_SHADING_RATE_MAX_FRAGMENT_WIDTH,
+		LIMIT_FRAGMENT_SHADING_RATE_MAX_FRAGMENT_HEIGHT,
+		LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_WIDTH,
+		LIMIT_MIN_FRAGMENT_DENSITY_TEXEL_HEIGHT,
+		LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_WIDTH,
+		LIMIT_MAX_FRAGMENT_DENSITY_TEXEL_HEIGHT,
 	};
 
 	enum Features {
 		SUPPORTS_MULTIVIEW,
 		SUPPORTS_FSR_HALF_FLOAT,
-		SUPPORTS_ATTACHMENT_VRS,
+		SUPPORTS_ATTACHMENT_FRAGMENT_SHADING_RATE,
 		// If not supported, a fragment shader with only side effets (i.e., writes  to buffers, but doesn't output to attachments), may be optimized down to no-op by the GPU driver.
 		SUPPORTS_FRAGMENT_SHADER_WITH_ONLY_SIDE_EFFECTS,
+		SUPPORTS_FRAGMENT_DENSITY_MAP,
 	};
 
 	enum SubgroupOperations {
