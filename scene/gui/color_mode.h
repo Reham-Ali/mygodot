@@ -33,8 +33,6 @@
 
 #include "scene/gui/color_picker.h"
 
-struct Color;
-
 class ColorMode {
 public:
 	ColorPicker *color_picker = nullptr;
@@ -57,7 +55,6 @@ public:
 	virtual ColorPicker::PickerShapeType get_shape_override() const { return ColorPicker::SHAPE_MAX; }
 
 	ColorMode(ColorPicker *p_color_picker);
-	virtual ~ColorMode() {}
 };
 
 class ColorModeHSV : public ColorMode {

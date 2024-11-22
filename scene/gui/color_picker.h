@@ -49,10 +49,7 @@
 #include "scene/resources/style_box_flat.h"
 
 class ColorMode;
-class ColorModeRGB;
-class ColorModeHSV;
-class ColorModeRAW;
-class ColorModeOKHSL;
+class ColorPickerShape;
 
 class ColorPresetButton : public BaseButton {
 	GDCLASS(ColorPresetButton, BaseButton);
@@ -82,6 +79,12 @@ class ColorPicker : public VBoxContainer {
 	GDCLASS(ColorPicker, VBoxContainer);
 
 	// These classes poke into theme items for their internal logic.
+	friend class ColorPickerShape;
+	friend class ColorPickerShapeRectangle;
+	friend class ColorPickerShapeWheel;
+	friend class ColorPickerShapeVHSCircle;
+	friend class ColorPickerShapeOKHSLCircle;
+
 	friend class ColorModeRGB;
 	friend class ColorModeHSV;
 	friend class ColorModeRAW;
@@ -110,11 +113,11 @@ public:
 	static const int SLIDER_COUNT = 4;
 
 private:
-	static Ref<Shader> wheel_shader;
-	static Ref<Shader> circle_shader;
-	static Ref<Shader> circle_ok_color_shader;
-	static List<Color> preset_cache;
-	static List<Color> recent_preset_cache;
+	inline static Ref<Shader> wheel_shader;
+	inline static Ref<Shader> circle_shader;
+	inline static Ref<Shader> circle_ok_color_shader;
+	inline static List<Color> preset_cache;
+	inline static List<Color> recent_preset_cache;
 
 #ifdef TOOLS_ENABLED
 	Object *editor_settings = nullptr;
@@ -125,7 +128,8 @@ private:
 
 	bool slider_theme_modified = true;
 
-	Vector<ColorMode *> modes;
+	LocalVector<ColorMode *> modes;
+	LocalVector<ColorPickerShape *> shapes;
 
 	Popup *picker_window = nullptr;
 	// Legacy color picking.
@@ -135,6 +139,7 @@ private:
 	Color picker_color;
 
 	MarginContainer *internal_margin = nullptr;
+	HBoxContainer *shape_container = nullptr;
 	Control *uv_edit = nullptr;
 	Control *w_edit = nullptr;
 	AspectRatioContainer *wheel_edit = nullptr;
@@ -264,7 +269,6 @@ private:
 	void _text_type_toggled();
 	void _sample_input(const Ref<InputEvent> &p_event);
 	void _sample_draw();
-	void _hsv_draw(int p_which, Control *c);
 	void _slider_draw(int p_which);
 
 	void _uv_input(const Ref<InputEvent> &p_event, Control *c);
@@ -312,6 +316,7 @@ public:
 	static void finish_shaders();
 
 	void add_mode(ColorMode *p_mode);
+	void add_shape(ColorPickerShape *p_shape);
 
 	void set_edit_alpha(bool p_show);
 	bool is_editing_alpha() const;
