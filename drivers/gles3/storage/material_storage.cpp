@@ -2421,6 +2421,15 @@ void MaterialStorage::material_set_shader(RID p_material, RID p_shader) {
 	_material_queue_update(material, true, true);
 }
 
+ShaderData *MaterialStorage::material_get_shader_data(RID p_material) {
+	const Material *material = MaterialStorage::get_singleton()->get_material(p_material);
+	if (material && material->shader && material->shader->data) {
+		return material->shader->data;
+	}
+
+	return nullptr;
+}
+
 void MaterialStorage::material_set_param(RID p_material, const StringName &p_param, const Variant &p_value) {
 	GLES3::Material *material = material_owner.get_or_null(p_material);
 	ERR_FAIL_NULL(material);
@@ -2635,6 +2644,10 @@ bool CanvasShaderData::casts_shadows() const {
 	return false;
 }
 
+ShaderData::CullMode CanvasShaderData::get_cull_mode() const {
+	return CULL_DISABLED;
+}
+
 RS::ShaderNativeSourceCode CanvasShaderData::get_native_source_code() const {
 	return MaterialStorage::get_singleton()->shaders.canvas_shader.version_get_native_source_code(version);
 }
@@ -2805,6 +2818,10 @@ bool SkyShaderData::is_animated() const {
 
 bool SkyShaderData::casts_shadows() const {
 	return false;
+}
+
+ShaderData::CullMode SkyShaderData::get_cull_mode() const {
+	return CULL_DISABLED;
 }
 
 RS::ShaderNativeSourceCode SkyShaderData::get_native_source_code() const {
@@ -2990,7 +3007,7 @@ void SceneShaderData::set_code(const String &p_code) {
 	alpha_antialiasing_mode = AlphaAntiAliasing(alpha_antialiasing_modei);
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
-	cull_mode = Cull(cull_modei);
+	cull_mode = CullMode(cull_modei);
 
 	vertex_input_mask = RS::ARRAY_FORMAT_VERTEX | RS::ARRAY_FORMAT_NORMAL; // We can always read vertices and normals.
 	vertex_input_mask |= uses_tangent << RS::ARRAY_TANGENT;
@@ -3078,6 +3095,10 @@ bool SceneShaderData::casts_shadows() const {
 	bool has_alpha = has_base_alpha || uses_blend_alpha;
 
 	return !has_alpha || (uses_depth_prepass_alpha && !(depth_draw == DEPTH_DRAW_DISABLED || depth_test == DEPTH_TEST_DISABLED));
+}
+
+ShaderData::CullMode SceneShaderData::get_cull_mode() const {
+	return cull_mode;
 }
 
 RS::ShaderNativeSourceCode SceneShaderData::get_native_source_code() const {
@@ -3193,6 +3214,10 @@ bool ParticlesShaderData::is_animated() const {
 
 bool ParticlesShaderData::casts_shadows() const {
 	return false;
+}
+
+ShaderData::CullMode ParticlesShaderData::get_cull_mode() const {
+	return CULL_DISABLED;
 }
 
 RS::ShaderNativeSourceCode ParticlesShaderData::get_native_source_code() const {

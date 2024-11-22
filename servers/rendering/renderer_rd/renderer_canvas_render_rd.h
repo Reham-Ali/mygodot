@@ -171,6 +171,7 @@ class RendererCanvasRenderRD : public RendererCanvasRender {
 		virtual void set_code(const String &p_Code);
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
+		virtual RendererRD::MaterialStorage::ShaderData::CullMode get_cull_mode() const;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 		RID get_shader(ShaderVariant p_shader_variant, bool p_ubershader) const;
 		uint64_t get_vertex_input_mask(ShaderVariant p_shader_variant, bool p_ubershader);

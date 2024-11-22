@@ -1557,6 +1557,10 @@ bool RendererCanvasRenderRD::CanvasShaderData::casts_shadows() const {
 	return false;
 }
 
+RendererRD::MaterialStorage::ShaderData::CullMode RendererCanvasRenderRD::CanvasShaderData::get_cull_mode() const {
+	return CULL_DISABLED;
+}
+
 RS::ShaderNativeSourceCode RendererCanvasRenderRD::CanvasShaderData::get_native_source_code() const {
 	RendererCanvasRenderRD *canvas_singleton = static_cast<RendererCanvasRenderRD *>(RendererCanvasRender::singleton);
 	MutexLock lock(canvas_singleton->shader.mutex);

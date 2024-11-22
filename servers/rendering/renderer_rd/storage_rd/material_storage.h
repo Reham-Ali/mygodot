@@ -66,6 +66,12 @@ public:
 			BLEND_MODE_DISABLED
 		};
 
+		enum CullMode {
+			CULL_DISABLED,
+			CULL_FRONT,
+			CULL_BACK
+		};
+
 		String path;
 		HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 		HashMap<StringName, HashMap<int, RID>> default_texture_params;
@@ -80,6 +86,7 @@ public:
 		virtual void set_code(const String &p_Code) = 0;
 		virtual bool is_animated() const = 0;
 		virtual bool casts_shadows() const = 0;
+		virtual CullMode get_cull_mode() const = 0;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const { return RS::ShaderNativeSourceCode(); }
 
 		virtual ~ShaderData() {}

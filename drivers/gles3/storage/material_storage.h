@@ -52,6 +52,12 @@ namespace GLES3 {
 /* Shader Structs */
 
 struct ShaderData {
+	enum CullMode {
+		CULL_DISABLED,
+		CULL_FRONT,
+		CULL_BACK
+	};
+
 	String path;
 	HashMap<StringName, ShaderLanguage::ShaderNode::Uniform> uniforms;
 	HashMap<StringName, HashMap<int, RID>> default_texture_params;
@@ -66,6 +72,7 @@ struct ShaderData {
 	virtual void set_code(const String &p_Code) = 0;
 	virtual bool is_animated() const = 0;
 	virtual bool casts_shadows() const = 0;
+	virtual CullMode get_cull_mode() const = 0;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const { return RS::ShaderNativeSourceCode(); }
 
 	virtual ~ShaderData() {}
@@ -175,6 +182,7 @@ struct CanvasShaderData : public ShaderData {
 	virtual void set_code(const String &p_Code);
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
+	virtual CullMode get_cull_mode() const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 	CanvasShaderData();
@@ -220,6 +228,7 @@ struct SkyShaderData : public ShaderData {
 	virtual void set_code(const String &p_Code);
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
+	virtual CullMode get_cull_mode() const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 	SkyShaderData();
 	virtual ~SkyShaderData();
@@ -263,12 +272,6 @@ struct SceneShaderData : public ShaderData {
 		DEPTH_TEST_ENABLED
 	};
 
-	enum Cull {
-		CULL_DISABLED,
-		CULL_FRONT,
-		CULL_BACK
-	};
-
 	enum AlphaAntiAliasing {
 		ALPHA_ANTIALIASING_OFF,
 		ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
@@ -292,7 +295,7 @@ struct SceneShaderData : public ShaderData {
 	AlphaAntiAliasing alpha_antialiasing_mode;
 	DepthDraw depth_draw;
 	DepthTest depth_test;
-	Cull cull_mode;
+	CullMode cull_mode;
 
 	bool uses_point_size;
 	bool uses_alpha;
@@ -335,6 +338,7 @@ struct SceneShaderData : public ShaderData {
 	virtual void set_code(const String &p_Code);
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
+	virtual CullMode get_cull_mode() const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 	SceneShaderData();
@@ -387,6 +391,7 @@ struct ParticlesShaderData : public ShaderData {
 	virtual void set_code(const String &p_Code);
 	virtual bool is_animated() const;
 	virtual bool casts_shadows() const;
+	virtual CullMode get_cull_mode() const;
 	virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 
 	ParticlesShaderData() {}
@@ -609,6 +614,7 @@ public:
 	virtual void material_free(RID p_rid) override;
 
 	virtual void material_set_shader(RID p_material, RID p_shader) override;
+	ShaderData *material_get_shader_data(RID p_material);
 
 	virtual void material_set_param(RID p_material, const StringName &p_param, const Variant &p_value) override;
 	virtual Variant material_get_param(RID p_material, const StringName &p_param) const override;

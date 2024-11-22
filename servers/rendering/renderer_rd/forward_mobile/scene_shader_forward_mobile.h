@@ -249,6 +249,7 @@ public:
 		virtual void set_code(const String &p_Code);
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
+		virtual RendererRD::MaterialStorage::ShaderData::CullMode get_cull_mode() const;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 		RD::PolygonCullMode get_cull_mode_from_cull_variant(CullVariant p_cull_variant);
 		void _clear_vertex_input_mask_cache();
