@@ -32,6 +32,8 @@
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
 #include "core/io/resource_loader.h"
+#include "servers/rendering/renderer_rd/forward_clustered/scene_shader_forward_clustered.h"
+#include "servers/rendering/renderer_rd/forward_mobile/scene_shader_forward_mobile.h"
 #include "servers/rendering/storage/variant_converters.h"
 #include "texture_storage.h"
 
@@ -2030,6 +2032,23 @@ void MaterialStorage::get_shader_parameter_list(RID p_shader, List<PropertyInfo>
 	if (shader->data) {
 		return shader->data->get_shader_uniform_list(p_param_list);
 	}
+}
+
+RS::CullMode MaterialStorage::shader_get_cull_mode(RID p_shader) const {
+	const RendererRD::MaterialStorage::Shader *shader = shader_owner.get_or_null(p_shader);
+	ERR_FAIL_NULL_V(shader, RS::CULL_MODE_DISABLED);
+	if (shader->type == ShaderType::SHADER_TYPE_3D && shader->data) {
+		RendererSceneRenderImplementation::SceneShaderForwardClustered::ShaderData *sd_clustered = dynamic_cast<RendererSceneRenderImplementation::SceneShaderForwardClustered::ShaderData *>(shader->data);
+		if (sd_clustered) {
+			return (RS::CullMode)sd_clustered->cull_mode;
+		}
+
+		RendererSceneRenderImplementation::SceneShaderForwardMobile::ShaderData *sd_mobile = dynamic_cast<RendererSceneRenderImplementation::SceneShaderForwardMobile::ShaderData *>(shader->data);
+		if (sd_mobile) {
+			return (RS::CullMode)sd_mobile->cull_mode;
+		}
+	}
+	return RS::CULL_MODE_DISABLED;
 }
 
 void MaterialStorage::shader_set_default_texture_parameter(RID p_shader, const StringName &p_name, RID p_texture, int p_index) {
