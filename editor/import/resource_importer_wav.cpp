@@ -35,6 +35,8 @@
 #include "core/io/resource_saver.h"
 #include "scene/resources/audio_stream_wav.h"
 
+#include "thirdparty/libsamplerate/include/samplerate.h"
+
 const float TRIM_DB_LIMIT = -50;
 const int TRIM_FADE_OUT_FRAMES = 500;
 
@@ -325,39 +327,19 @@ Error ResourceImporterWAV::import(ResourceUID::ID p_source_id, const String &p_s
 	print_line("\tloop end: " + itos(loop_end));
 	*/
 
-	//apply frequency limit
+	// Apply sample rate conversion using libsamplerate.
 
 	bool limit_rate = p_options["force/max_rate"];
 	int limit_rate_hz = p_options["force/max_rate_hz"];
 	if (limit_rate && rate > limit_rate_hz && rate > 0 && frames > 0) {
-		// resample!
-		int new_data_frames = (int)(frames * (float)limit_rate_hz / (float)rate);
+		double ratio = (double)limit_rate_hz / (double)rate;
+		int new_data_frames = (int)(frames * ratio);
 
 		Vector<float> new_data;
 		new_data.resize(new_data_frames * format_channels);
-		for (int c = 0; c < format_channels; c++) {
-			float frac = .0f;
-			int ipos = 0;
 
-			for (int i = 0; i < new_data_frames; i++) {
-				// Cubic interpolation should be enough.
-
-				float y0 = data[MAX(0, ipos - 1) * format_channels + c];
-				float y1 = data[ipos * format_channels + c];
-				float y2 = data[MIN(frames - 1, ipos + 1) * format_channels + c];
-				float y3 = data[MIN(frames - 1, ipos + 2) * format_channels + c];
-
-				new_data.write[i * format_channels + c] = Math::cubic_interpolate(y1, y2, y0, y3, frac);
-
-				// update position and always keep fractional part within ]0...1]
-				// in order to avoid 32bit floating point precision errors
-
-				frac += (float)rate / (float)limit_rate_hz;
-				int tpos = (int)Math::floor(frac);
-				ipos += tpos;
-				frac -= tpos;
-			}
-		}
+		SRC_DATA src_data = { data.ptr(), new_data.ptrw(), frames, new_data_frames, 0, 0, 1, ratio };
+		src_simple(&src_data, SRC_SINC_MEDIUM_QUALITY, format_channels);
 
 		if (loop_mode) {
 			loop_begin = (int)(loop_begin * (float)new_data_frames / (float)frames);

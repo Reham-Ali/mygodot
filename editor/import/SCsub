@@ -3,5 +3,33 @@ from misc.utility.scons_hints import *
 
 Import("env")
 
+# libsamplerate
+
+libsamplerate_obj = []
+
+thirdparty_libsamplerate_dir = "#thirdparty/libsamplerate/"
+thirdparty_libsamplerate_src = thirdparty_libsamplerate_dir + "src/"
+thirdparty_libsamplerate_sources = [
+	"samplerate.c",
+	"src_linear.c",
+	"src_sinc.c",
+	"src_zoh.c",
+]
+
+thirdparty_libsamplerate_sources = [thirdparty_libsamplerate_src + file for file in thirdparty_libsamplerate_sources]
+
+env_libsamplerate = env.Clone()
+env_libsamplerate.Prepend(CPPDEFINES=[
+	"ENABLE_SINC_MEDIUM_CONVERTER",
+	"HAVE_STDBOOL_H",
+	# These last two are irrelevant, but defining is required for compilation.
+	("PACKAGE", f'\\"\\"'),
+	("VERSION", f'\\"\\"'),
+])
+env_libsamplerate.Prepend(CPPPATH=[thirdparty_libsamplerate_dir + "include/", thirdparty_libsamplerate_src])
+
+env_libsamplerate.add_source_files(libsamplerate_obj, thirdparty_libsamplerate_sources)
+env.editor_sources += libsamplerate_obj
+
 env.add_source_files(env.editor_sources, "*.cpp")
 env.add_source_files(env.editor_sources, "3d/*.cpp")
