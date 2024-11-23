@@ -556,6 +556,54 @@ Error RenderingDevice::buffer_update(RID p_buffer, uint32_t p_offset, uint32_t p
 	return OK;
 }
 
+Error RenderingDevice::driver_callback_add(RDD::DriverCallback p_callback, void *p_userdata, VectorView<CallbackResource> p_resources) {
+	ERR_RENDER_THREAD_GUARD_V(ERR_UNAVAILABLE);
+
+	ERR_FAIL_COND_V_MSG(draw_list, ERR_INVALID_PARAMETER,
+			"Driver callback is forbidden during creation of a draw list");
+	ERR_FAIL_COND_V_MSG(compute_list, ERR_INVALID_PARAMETER,
+			"Driver callback is forbidden during creation of a compute list");
+
+	RDG::ResourceTracker **trackers = nullptr;
+	RDG::ResourceUsage *usages = nullptr;
+	uint32_t resource_count = p_resources.size();
+
+	if (resource_count > 0) {
+		trackers = ALLOCA_ARRAY(RDG::ResourceTracker *, p_resources.size());
+		usages = ALLOCA_ARRAY(RDG::ResourceUsage, p_resources.size());
+		for (uint32_t i = 0; i < p_resources.size(); i++) {
+			const CallbackResource &cr = p_resources[i];
+			switch (cr.type) {
+				case CallbackResourceType::BUFFER: {
+					Buffer *buffer = _get_buffer_from_owner(cr.rid);
+					if (!buffer) {
+						ERR_FAIL_V_MSG(ERR_INVALID_PARAMETER, vformat("argument %d is not a valid buffer of any type.", i));
+					}
+					trackers[i] = buffer->draw_tracker;
+					usages[i] = cr.usage;
+				} break;
+				case CallbackResourceType::TEXTURE: {
+					Texture *texture = texture_owner.get_or_null(cr.rid);
+					if (!texture) {
+						ERR_FAIL_V_MSG(ERR_INVALID_PARAMETER, vformat("argument %d is not a valid texture.", i));
+					}
+					trackers[i] = texture->draw_tracker;
+					usages[i] = cr.usage;
+				} break;
+				default: {
+					CRASH_NOW_MSG("Invalid callback resource type.");
+				} break;
+			}
+		}
+	}
+
+	draw_graph.add_driver_callback(p_callback, p_userdata,
+			VectorView(trackers, resource_count),
+			VectorView(usages, resource_count));
+
+	return OK;
+}
+
 String RenderingDevice::get_perf_report() const {
 	return perf_report_text;
 }

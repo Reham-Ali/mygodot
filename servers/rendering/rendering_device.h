@@ -206,6 +206,25 @@ public:
 	Error buffer_clear(RID p_buffer, uint32_t p_offset, uint32_t p_size);
 	Vector<uint8_t> buffer_get_data(RID p_buffer, uint32_t p_offset = 0, uint32_t p_size = 0); // This causes stall, only use to retrieve large buffers for saving.
 
+private:
+	/******************/
+	/**** CALLBACK ****/
+	/******************/
+
+public:
+	enum class CallbackResourceType {
+		TEXTURE,
+		BUFFER,
+	};
+
+	struct CallbackResource {
+		CallbackResourceType type = CallbackResourceType::TEXTURE;
+		RID rid;
+		RDG::ResourceUsage usage = RDG::RESOURCE_USAGE_NONE;
+	};
+
+	Error driver_callback_add(RDD::DriverCallback p_callback, void *p_userdata, VectorView<CallbackResource> p_resources);
+
 	/*****************/
 	/**** TEXTURE ****/
 	/*****************/
@@ -858,6 +877,7 @@ private:
 #endif
 
 public:
+	RenderingDeviceDriver *get_device_driver() const { return driver; }
 	RenderingContextDriver *get_context_driver() const { return context; }
 
 	const RDD::Capabilities &get_device_capabilities() const { return driver->get_capabilities(); }

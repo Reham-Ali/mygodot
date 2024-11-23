@@ -3869,11 +3869,17 @@ uint64_t RenderingDeviceDriverMetal::limit_get(Limit p_limit) {
 		case LIMIT_SUBGROUP_MAX_SIZE:
 			return limits.maxSubgroupSize;
 		case LIMIT_SUBGROUP_IN_SHADERS:
-			return (int64_t)limits.subgroupSupportedShaderStages;
+			return (uint64_t)limits.subgroupSupportedShaderStages;
 		case LIMIT_SUBGROUP_OPERATIONS:
-			return (int64_t)limits.subgroupSupportedOperations;
+			return (uint64_t)limits.subgroupSupportedOperations;
+		case LIMIT_METALFX_TEMPORAL_SCALER_MIN_INPUT_SCALE:
+			return bit_cast<uint64_t, double>(limits.temporalScalerInputContentMinScale);
+		case LIMIT_METALFX_TEMPORAL_SCALER_MAX_INPUT_SCALE:
+			return bit_cast<uint64_t, double>(limits.temporalScalerInputContentMaxScale);
 		UNKNOWN(LIMIT_VRS_TEXEL_WIDTH);
 		UNKNOWN(LIMIT_VRS_TEXEL_HEIGHT);
+		UNKNOWN(LIMIT_VRS_MAX_FRAGMENT_WIDTH);
+		UNKNOWN(LIMIT_VRS_MAX_FRAGMENT_HEIGHT);
 		default:
 			ERR_FAIL_V(0);
 	}
@@ -3905,6 +3911,10 @@ bool RenderingDeviceDriverMetal::has_feature(Features p_feature) {
 			return false;
 		case SUPPORTS_FRAGMENT_SHADER_WITH_ONLY_SIDE_EFFECTS:
 			return true;
+		case SUPPORTS_METALFX_SPATIAL:
+			return metal_device_properties->features.metal_fx_spatial;
+		case SUPPORTS_METALFX_TEMPORAL:
+			return metal_device_properties->features.metal_fx_temporal;
 		default:
 			return false;
 	}
