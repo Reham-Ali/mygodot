@@ -9,7 +9,7 @@
 	<tutorials>
 	</tutorials>
 	<methods>
-		<method name="load_from_file">
+		<method name="load_from_file" qualifiers="static">
 			<return type="AudioStreamMP3" />
 			<param index="0" name="path" type="String" />
 			<description>
