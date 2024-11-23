@@ -33,6 +33,7 @@
 #define MINIMP3_NO_STDIO
 
 #include "audio_stream_mp3.h"
+
 #include "resource_importer_mp3.h"
 
 #include "core/io/file_access.h"
