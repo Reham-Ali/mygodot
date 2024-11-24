@@ -490,6 +490,8 @@ public:
 	virtual bool window_maximize_on_title_dbl_click() const { return false; }
 	virtual bool window_minimize_on_title_dbl_click() const { return false; }
 
+	virtual void window_start_drag(WindowID p_window = MAIN_WINDOW_ID) {}
+
 	// necessary for GL focus, may be able to use one of the existing functions for this, not sure yet
 	virtual void gl_window_make_current(DisplayServer::WindowID p_window_id);
 
