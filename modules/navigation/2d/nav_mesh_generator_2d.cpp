@@ -691,11 +691,15 @@ void NavMeshGenerator2D::generator_parse_navigationobstacle_node(const Ref<Navig
 		return;
 	}
 
-	const Transform2D node_xform = p_source_geometry_data->root_node_transform * Transform2D(0.0, obstacle->get_global_position());
-
+	const Vector2 safe_scale = obstacle->get_global_scale().abs().maxf(0.001);
 	const float obstacle_radius = obstacle->get_radius();
 
 	if (obstacle_radius > 0.0) {
+		// Radius defined obstacle should be uniformly scaled from obstacle basis max scale axis.
+		const float scaling_max_value = safe_scale[safe_scale.max_axis_index()];
+		const Vector2 uniform_max_scale = Vector2(scaling_max_value, scaling_max_value);
+		const Transform2D obstacle_circle_transform = p_source_geometry_data->root_node_transform * Transform2D(obstacle->get_global_rotation(), uniform_max_scale, 0.0, obstacle->get_global_position());
+
 		Vector<Vector2> obstruction_circle_vertices;
 
 		// The point of this is that the moving obstacle can make a simple hole in the navigation mesh and affect the pathfinding.
@@ -709,11 +713,14 @@ void NavMeshGenerator2D::generator_parse_navigationobstacle_node(const Ref<Navig
 
 		for (int i = 0; i < circle_points; i++) {
 			const float angle = i * circle_point_step;
-			circle_vertices_ptrw[i] = node_xform.xform(Vector2(Math::cos(angle) * obstacle_radius, Math::sin(angle) * obstacle_radius));
+			circle_vertices_ptrw[i] = obstacle_circle_transform.xform(Vector2(Math::cos(angle) * obstacle_radius, Math::sin(angle) * obstacle_radius));
 		}
 
 		p_source_geometry_data->add_projected_obstruction(obstruction_circle_vertices, obstacle->get_carve_navigation_mesh());
 	}
+
+	// Obstacles are projected to the xz-plane, so only rotation around the y-axis can be taken into account.
+	const Transform2D node_xform = p_source_geometry_data->root_node_transform * obstacle->get_global_transform();
 
 	const Vector<Vector2> &obstacle_vertices = obstacle->get_vertices();
 
@@ -843,7 +850,7 @@ void NavMeshGenerator2D::generator_bake_from_source_geometry_data(Ref<Navigation
 	using namespace Clipper2Lib;
 	PathsD traversable_polygon_paths;
 	PathsD obstruction_polygon_paths;
-	int obstruction_polygon_path_size = 0;
+	bool empty_projected_obstructions = true;
 	{
 		RWLockRead read_lock(p_source_geometry_data->geometry_rwlock);
 
@@ -879,7 +886,8 @@ void NavMeshGenerator2D::generator_bake_from_source_geometry_data(Ref<Navigation
 			traversable_polygon_paths.push_back(std::move(subject_path));
 		}
 
-		if (!projected_obstructions.is_empty()) {
+		empty_projected_obstructions = projected_obstructions.is_empty();
+		if (!empty_projected_obstructions) {
 			for (const NavigationMeshSourceGeometryData2D::ProjectedObstruction &projected_obstruction : projected_obstructions) {
 				if (projected_obstruction.carve) {
 					continue;
@@ -900,7 +908,6 @@ void NavMeshGenerator2D::generator_bake_from_source_geometry_data(Ref<Navigation
 			}
 		}
 
-		obstruction_polygon_path_size = obstruction_polygon_paths.size();
 		for (const Vector<Vector2> &obstruction_outline : obstruction_outlines) {
 			PathD clip_path;
 			clip_path.reserve(obstruction_outline.size());
@@ -912,7 +919,6 @@ void NavMeshGenerator2D::generator_bake_from_source_geometry_data(Ref<Navigation
 	}
 
 	Rect2 baking_rect = p_navigation_mesh->get_baking_rect();
-	PathsD area_obstruction_polygon_paths;
 	if (baking_rect.has_area()) {
 		Vector2 baking_rect_offset = p_navigation_mesh->get_baking_rect_offset();
 
@@ -924,27 +930,48 @@ void NavMeshGenerator2D::generator_bake_from_source_geometry_data(Ref<Navigation
 		RectD clipper_rect = RectD(rect_begin_x, rect_begin_y, rect_end_x, rect_end_y);
 
 		traversable_polygon_paths = RectClip(clipper_rect, traversable_polygon_paths);
-		area_obstruction_polygon_paths = RectClip(clipper_rect, obstruction_polygon_paths);
-	} else {
-		area_obstruction_polygon_paths = obstruction_polygon_paths;
+		obstruction_polygon_paths = RectClip(clipper_rect, obstruction_polygon_paths);
 	}
 
 	// first merge all traversable polygons according to user specified fill rule
 	PathsD dummy_clip_path;
 	traversable_polygon_paths = Union(traversable_polygon_paths, dummy_clip_path, FillRule::NonZero);
 	// merge all obstruction polygons, don't allow holes for what is considered "solid" 2D geometry
-	area_obstruction_polygon_paths = Union(area_obstruction_polygon_paths, dummy_clip_path, FillRule::NonZero);
+	obstruction_polygon_paths = Union(obstruction_polygon_paths, dummy_clip_path, FillRule::NonZero);
 
-	PathsD path_solution = Difference(traversable_polygon_paths, area_obstruction_polygon_paths, FillRule::NonZero);
+	PathsD path_solution = Difference(traversable_polygon_paths, obstruction_polygon_paths, FillRule::NonZero);
 
 	real_t agent_radius_offset = p_navigation_mesh->get_agent_radius();
 	if (agent_radius_offset > 0.0) {
 		path_solution = InflatePaths(path_solution, -agent_radius_offset, JoinType::Miter, EndType::Polygon);
 	}
 
-	if (obstruction_polygon_path_size > 0) {
-		obstruction_polygon_paths.resize(obstruction_polygon_path_size);
-		path_solution = Difference(path_solution, obstruction_polygon_paths, FillRule::NonZero);
+	// Apply obstructions that are not affected by agent radius, the ones with carve enabled.
+	if (!empty_projected_obstructions) {
+		RWLockRead read_lock(p_source_geometry_data->geometry_rwlock);
+		const Vector<NavigationMeshSourceGeometryData2D::ProjectedObstruction> &projected_obstructions = p_source_geometry_data->_projected_obstructions;
+		obstruction_polygon_paths.resize(0);
+		for (const NavigationMeshSourceGeometryData2D::ProjectedObstruction &projected_obstruction : projected_obstructions) {
+			if (!projected_obstruction.carve) {
+				continue;
+			}
+			if (projected_obstruction.vertices.is_empty() || projected_obstruction.vertices.size() % 2 != 0) {
+				continue;
+			}
+
+			PathD clip_path;
+			clip_path.reserve(projected_obstruction.vertices.size() / 2);
+			for (int i = 0; i < projected_obstruction.vertices.size() / 2; i++) {
+				clip_path.emplace_back(projected_obstruction.vertices[i * 2], projected_obstruction.vertices[i * 2 + 1]);
+			}
+			if (!IsPositive(clip_path)) {
+				std::reverse(clip_path.begin(), clip_path.end());
+			}
+			obstruction_polygon_paths.push_back(std::move(clip_path));
+		}
+		if (obstruction_polygon_paths.size() > 0) {
+			path_solution = Difference(path_solution, obstruction_polygon_paths, FillRule::NonZero);
+		}
 	}
 
 	//path_solution = RamerDouglasPeucker(path_solution, 0.025); //
