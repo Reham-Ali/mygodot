@@ -30,6 +30,7 @@
 
 #include "lightmapper_rd.h"
 
+#include "drivers/gles3/storage/material_storage.h"
 #include "lm_blendseams.glsl.gen.h"
 #include "lm_compute.glsl.gen.h"
 #include "lm_raster.glsl.gen.h"
@@ -474,7 +475,23 @@ void LightmapperRD::_create_acceleration_structures(RenderingDevice *rd, Size2i 
 			t.max_bounds[0] = taabb.position.x + MAX(taabb.size.x, 0.0001);
 			t.max_bounds[1] = taabb.position.y + MAX(taabb.size.y, 0.0001);
 			t.max_bounds[2] = taabb.position.z + MAX(taabb.size.z, 0.0001);
-			t.pad0 = t.pad1 = 0; //make valgrind not complain
+
+			t.cull_mode = RendererRD::MaterialStorage::ShaderData::CULL_BACK;
+
+			RID material = mi.data.material[i];
+			if (material.is_valid()) {
+				// TODO: Switch based on rendering method.
+				if (OS::get_singleton()->get_current_rendering_method() == "gl_compatibility") {
+					GLES3::MaterialStorage *material_storage = GLES3::MaterialStorage::get_singleton();
+					GLES3::ShaderData *shader_data = material_storage->material_get_shader_data(material);
+					t.cull_mode = shader_data->get_cull_mode();
+				} else {
+					RendererRD::MaterialStorage *material_storage = RendererRD::MaterialStorage::get_singleton();
+					RendererRD::MaterialStorage::ShaderData *shader_data = material_storage->material_get_shader_data(mi.data.material[i]);
+					t.cull_mode = shader_data->get_cull_mode();
+				}
+			}
+			t.pad1 = 0; //make valgrind not complain
 			triangles.push_back(t);
 			slice_triangle_count.write[t.slice]++;
 		}
@@ -1266,6 +1283,8 @@ LightmapperRD::BakeError LightmapperRD::bake(BakeQuality p_quality, bool p_use_d
 	bake_parameters.exposure_normalization = p_exposure_normalization;
 	bake_parameters.bounces = p_bounces;
 	bake_parameters.bounce_indirect_energy = p_bounce_indirect_energy;
+	// Same number of rays for transparency regardless of quality (it's more of a retry rather than shooting new ones).
+	bake_parameters.transparency_rays = GLOBAL_GET("rendering/lightmapping/bake_performance/max_transparency_rays");
 
 	bake_parameters_buffer = rd->uniform_buffer_create(sizeof(BakeParameters));
 	rd->buffer_update(bake_parameters_buffer, 0, sizeof(BakeParameters), &bake_parameters);

@@ -280,6 +280,7 @@ public:
 
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
+		virtual RendererRD::MaterialStorage::ShaderData::CullMode get_cull_mode() const;
 		virtual RS::ShaderNativeSourceCode get_native_source_code() const;
 		ShaderVersion _get_shader_version(PipelineVersion p_pipeline_version, uint32_t p_color_pass_flags, bool p_ubershader) const;
 		RID _get_shader_variant(ShaderVersion p_shader_version) const;
