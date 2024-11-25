@@ -33,6 +33,10 @@
 #include "core/error/error_macros.h"
 #include "core/templates/safe_refcount.h"
 
+#ifdef ALLOC_MIMALLOC
+#include "thirdparty/mimalloc/include/mimalloc.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,7 +76,12 @@ void *Memory::alloc_aligned_static(size_t p_bytes, size_t p_alignment) {
 	DEV_ASSERT(is_power_of_2(p_alignment));
 
 	void *p1, *p2;
+
+#ifdef ALLOC_MIMALLOC
+	if ((p1 = (void *)mi_malloc(p_bytes + p_alignment - 1 + sizeof(uint32_t))) == nullptr) {
+#else
 	if ((p1 = (void *)malloc(p_bytes + p_alignment - 1 + sizeof(uint32_t))) == nullptr) {
+#endif
 		return nullptr;
 	}
 
@@ -95,7 +104,11 @@ void *Memory::realloc_aligned_static(void *p_memory, size_t p_bytes, size_t p_pr
 void Memory::free_aligned_static(void *p_memory) {
 	uint32_t offset = *((uint32_t *)p_memory - 1);
 	void *p = (void *)((uint8_t *)p_memory - offset);
+#ifdef ALLOC_MIMALLOC
+	mi_free(p);
+#else
 	free(p);
+#endif
 }
 
 void *Memory::alloc_static(size_t p_bytes, bool p_pad_align) {
@@ -105,7 +118,11 @@ void *Memory::alloc_static(size_t p_bytes, bool p_pad_align) {
 	bool prepad = p_pad_align;
 #endif
 
+#ifdef ALLOC_MIMALLOC
+	void *mem = mi_malloc(p_bytes + (prepad ? DATA_OFFSET : 0));
+#else
 	void *mem = malloc(p_bytes + (prepad ? DATA_OFFSET : 0));
+#endif
 
 	ERR_FAIL_NULL_V(mem, nullptr);
 
@@ -154,12 +171,20 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 #endif
 
 		if (p_bytes == 0) {
+#ifdef ALLOC_MIMALLOC
+			mi_free(mem);
+#else
 			free(mem);
+#endif
 			return nullptr;
 		} else {
 			*s = p_bytes;
 
+#ifdef ALLOC_MIMALLOC
+			mem = (uint8_t *)mi_realloc(mem, p_bytes + DATA_OFFSET);
+#else
 			mem = (uint8_t *)realloc(mem, p_bytes + DATA_OFFSET);
+#endif
 			ERR_FAIL_NULL_V(mem, nullptr);
 
 			s = (uint64_t *)(mem + SIZE_OFFSET);
@@ -169,7 +194,11 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 			return mem + DATA_OFFSET;
 		}
 	} else {
+#ifdef ALLOC_MIMALLOC
+		mem = (uint8_t *)mi_realloc(mem, p_bytes);
+#else
 		mem = (uint8_t *)realloc(mem, p_bytes);
+#endif
 
 		ERR_FAIL_COND_V(mem == nullptr && p_bytes > 0, nullptr);
 
@@ -198,9 +227,17 @@ void Memory::free_static(void *p_ptr, bool p_pad_align) {
 		mem_usage.sub(*s);
 #endif
 
+#ifdef ALLOC_MIMALLOC
+		mi_free(mem);
+#else
 		free(mem);
+#endif
 	} else {
+#ifdef ALLOC_MIMALLOC
+		mi_free(mem);
+#else
 		free(mem);
+#endif
 	}
 }
 
