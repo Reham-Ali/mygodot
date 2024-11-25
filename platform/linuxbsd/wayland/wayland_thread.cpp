@@ -194,10 +194,6 @@ bool WaylandThread::_seat_state_configure_key_event(SeatState &p_ss, Ref<InputEv
 	Key physical_keycode = KeyMappingXKB::get_scancode(p_keycode);
 	KeyLocation key_location = KeyMappingXKB::get_location(p_keycode);
 
-	if (physical_keycode == Key::NONE) {
-		return false;
-	}
-
 	if (keycode == Key::NONE) {
 		keycode = physical_keycode;
 	}
