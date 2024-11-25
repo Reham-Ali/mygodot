@@ -158,4 +158,10 @@ Validate extension JSON: API was removed: builtin_classes/Vector4i/constants/AXI
 Validate extension JSON: API was removed: builtin_classes/Vector4i/constants/AXIS_Y
 Validate extension JSON: API was removed: builtin_classes/Vector4i/constants/AXIS_Z
 
+
 These constants have been replaced with corresponding enum constants.
+GH-97755
+--------
+Validate extension JSON: Error: Field 'classes/RenderingServer/methods/instance_geometry_set_lightmap/arguments': size changed value in new API, from 4 to 5.
+
+Optional argument added to allow specifying lightmap slice and scale for multimesh instances.
