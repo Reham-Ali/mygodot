@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
+Import("env")
+
+
+use_generic_override = env["platform"] in ["windows"]
+force_custom_tls_slot = use_generic_override and not env.msvc
+
+
+# Thirdparty source files
+
+thirdparty_obj = []
+
+thirdparty_dir = "#thirdparty/mimalloc/"
+thirdparty_sources = [
+    "src/alloc-aligned.c",
+    "src/alloc-posix.c",
+    "src/alloc.c",
+    "src/arena.c",
+    "src/bitmap.c",
+    "src/heap.c",
+    "src/init.c",
+    "src/libc.c",
+    "src/options.c",
+    "src/os.c",
+    "src/page.c",
+    "src/random.c",
+    "src/segment-map.c",
+    "src/segment.c",
+    "src/stats.c",
+]
+if use_generic_override:
+    thirdparty_sources += ["src/prim/windows/prim.c"]
+thirdparty_sources = [thirdparty_dir + file for file in thirdparty_sources]
+if force_custom_tls_slot:
+    thirdparty_sources += ["#drivers/mimalloc/mingw_custom_tls_slot.cpp"]
+
+env_thirdparty = env.Clone()
+env_thirdparty.disable_warnings()
+env_thirdparty.add_source_files(thirdparty_obj, thirdparty_sources)
+
+env_thirdparty.Append(
+    CPPDEFINES=[
+        ("MI_TRACK_ASAN", int(env.get("use_asan", False))),
+    ]
+)
+
+if env.get("mimalloc_custom_tls_slot", False) or force_custom_tls_slot:
+    env_thirdparty.Append(CPPFLAGS=["-includedrivers/mimalloc/custom_tls_slot.h"])
+
+if env.get("mimalloc_custom_get_thread_id", "") != "":
+    env_thirdparty.Append(
+        CPPDEFINES=[
+            ("MI_PRIM_THREAD_ID", env.get("mimalloc_custom_get_thread_id")),
+        ]
+    )
+
+env_thirdparty.Append(CPPPATH=[f"{thirdparty_dir}include/"])
+
+# This may be removed when SConstruct does it.
+if env.msvc:
+    env_thirdparty["CCFLAGS"] = [v for v in env_thirdparty["CCFLAGS"] if not v.startswith("/std:c++")]
+    env_thirdparty.Append(CFLAGS=["/std:c11"])
+
+env.drivers_sources += thirdparty_obj
+
+
+# Godot source files
+
+driver_obj = []
+
+env_mimalloc = env_thirdparty.Clone()
+env_mimalloc.Append(CPPPATH=[thirdparty_dir])
+
+if use_generic_override:
+    env_mimalloc.add_source_files(driver_obj, "override.cpp")
+
+env.drivers_sources += driver_obj
+
+
+# Needed to force rebuilding the driver files when the thirdparty code is updated.
+env.Depends(driver_obj, thirdparty_obj)
+
+if use_generic_override:
+    if env.msvc:
+        if env["arch"] == "x86_32":
+            env.Append(LINKFLAGS=["/INCLUDE:_mimalloc_godot_force_override"])
+        else:
+            env.Append(LINKFLAGS=["/INCLUDE:mimalloc_godot_force_override"])
