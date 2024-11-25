@@ -32,6 +32,7 @@
 #define TYPEDEFS_H
 
 #include <stddef.h>
+#include <string.h>
 
 /**
  * Basic definitions and simple functions to be used everywhere.
@@ -43,6 +44,7 @@
 // Should be available everywhere.
 #include "core/error/error_list.h"
 #include <cstdint>
+#include <type_traits>
 
 // Ensure that C++ standard is at least C++17. If on MSVC, also ensures that the `Zc:__cplusplus` flag is present.
 static_assert(__cplusplus >= 201703L);
@@ -125,6 +127,23 @@ constexpr auto MAX(const T m_a, const T2 m_b) {
 template <typename T, typename T2, typename T3>
 constexpr auto CLAMP(const T m_a, const T2 m_min, const T3 m_max) {
 	return m_a < m_min ? m_min : (m_a > m_max ? m_max : m_a);
+}
+
+template <class To, class From>
+std::enable_if_t<
+		sizeof(To) == sizeof(From) &&
+				std::is_trivially_copyable_v<From> &&
+				std::is_trivially_copyable_v<To>,
+		To>
+// constexpr support needs compiler magic
+bit_cast(const From &src) noexcept {
+	static_assert(std::is_trivially_constructible_v<To>,
+			"This implementation additionally requires "
+			"destination type to be trivially constructible");
+
+	To dst;
+	memcpy(&dst, &src, sizeof(To));
+	return dst;
 }
 
 // Generic swap template.
