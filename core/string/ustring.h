@@ -39,6 +39,8 @@
 #include "core/typedefs.h"
 #include "core/variant/array.h"
 
+typedef Vector<String> PackedStringArray;
+
 /*************************************************************************/
 /*  CharProxy                                                            */
 /*************************************************************************/
@@ -199,7 +201,7 @@ class String {
 	bool _base_is_subsequence_of(const String &p_string, bool case_insensitive) const;
 	int _count(const String &p_string, int p_from, int p_to, bool p_case_insensitive) const;
 	int _count(const char *p_string, int p_from, int p_to, bool p_case_insensitive) const;
-	String _camelcase_to_underscore() const;
+	PackedStringArray _separate_compound_words() const;
 
 public:
 	enum {
@@ -362,6 +364,7 @@ public:
 	String to_camel_case() const;
 	String to_pascal_case() const;
 	String to_snake_case() const;
+	String to_kebab_case() const;
 
 	String get_with_code_lines() const;
 	int get_slice_count(const String &p_splitter) const;
