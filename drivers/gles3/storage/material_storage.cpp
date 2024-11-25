@@ -2268,6 +2268,18 @@ void MaterialStorage::get_shader_parameter_list(RID p_shader, List<PropertyInfo>
 	}
 }
 
+RS::CullMode MaterialStorage::shader_get_cull_mode(RID p_shader) const {
+	const GLES3::Shader *shader = shader_owner.get_or_null(p_shader);
+	ERR_FAIL_NULL_V(shader, RS::CULL_MODE_DISABLED);
+	if (shader->mode == RS::SHADER_SPATIAL && shader->data) {
+		SceneShaderData *data = dynamic_cast<SceneShaderData *>(shader->data);
+		if (data) {
+			return (RS::CullMode)data->cull_mode;
+		}
+	}
+	return RS::CULL_MODE_DISABLED;
+}
+
 void MaterialStorage::shader_set_default_texture_parameter(RID p_shader, const StringName &p_name, RID p_texture, int p_index) {
 	GLES3::Shader *shader = shader_owner.get_or_null(p_shader);
 	ERR_FAIL_NULL(shader);
@@ -2907,7 +2919,7 @@ void SceneShaderData::set_code(const String &p_code) {
 	int blend_modei = BLEND_MODE_MIX;
 	int depth_testi = DEPTH_TEST_ENABLED;
 	int alpha_antialiasing_modei = ALPHA_ANTIALIASING_OFF;
-	int cull_modei = CULL_BACK;
+	int cull_modei = RS::CULL_MODE_BACK;
 	int depth_drawi = DEPTH_DRAW_OPAQUE;
 
 	ShaderCompiler::IdentifierActions actions;
@@ -2930,9 +2942,9 @@ void SceneShaderData::set_code(const String &p_code) {
 
 	actions.render_mode_values["depth_test_disabled"] = Pair<int *, int>(&depth_testi, DEPTH_TEST_DISABLED);
 
-	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_modei, CULL_DISABLED);
-	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_modei, CULL_FRONT);
-	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_modei, CULL_BACK);
+	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_modei, RS::CULL_MODE_DISABLED);
+	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_modei, RS::CULL_MODE_FRONT);
+	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_modei, RS::CULL_MODE_BACK);
 
 	actions.render_mode_flags["unshaded"] = &unshaded;
 	actions.render_mode_flags["wireframe"] = &wireframe;
@@ -2990,7 +3002,7 @@ void SceneShaderData::set_code(const String &p_code) {
 	alpha_antialiasing_mode = AlphaAntiAliasing(alpha_antialiasing_modei);
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
-	cull_mode = Cull(cull_modei);
+	cull_mode = RS::CullMode(cull_modei);
 
 	vertex_input_mask = RS::ARRAY_FORMAT_VERTEX | RS::ARRAY_FORMAT_NORMAL; // We can always read vertices and normals.
 	vertex_input_mask |= uses_tangent << RS::ARRAY_TANGENT;

@@ -263,12 +263,6 @@ struct SceneShaderData : public ShaderData {
 		DEPTH_TEST_ENABLED
 	};
 
-	enum Cull {
-		CULL_DISABLED,
-		CULL_FRONT,
-		CULL_BACK
-	};
-
 	enum AlphaAntiAliasing {
 		ALPHA_ANTIALIASING_OFF,
 		ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
@@ -292,7 +286,7 @@ struct SceneShaderData : public ShaderData {
 	AlphaAntiAliasing alpha_antialiasing_mode;
 	DepthDraw depth_draw;
 	DepthTest depth_test;
-	Cull cull_mode;
+	RS::CullMode cull_mode;
 
 	bool uses_point_size;
 	bool uses_alpha;
@@ -589,6 +583,7 @@ public:
 	virtual void shader_set_path_hint(RID p_shader, const String &p_path) override;
 	virtual String shader_get_code(RID p_shader) const override;
 	virtual void get_shader_parameter_list(RID p_shader, List<PropertyInfo> *p_param_list) const override;
+	virtual RS::CullMode shader_get_cull_mode(RID p_shader) const override;
 
 	virtual void shader_set_default_texture_parameter(RID p_shader, const StringName &p_name, RID p_texture, int p_index) override;
 	virtual RID shader_get_default_texture_parameter(RID p_shader, const StringName &p_name, int p_index) const override;
