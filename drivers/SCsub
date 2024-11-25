@@ -53,6 +53,9 @@ if env["metal"]:
 # Core dependencies
 SConscript("png/SCsub")
 
+if env.get("use_mimalloc", False):
+    SConscript("mimalloc/SCsub")
+
 env.add_source_files(env.drivers_sources, "*.cpp")
 
 lib = env.add_library("drivers", env.drivers_sources)

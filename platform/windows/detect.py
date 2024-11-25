@@ -242,6 +242,7 @@ def get_flags():
     return {
         "arch": arch,
         "supported": ["d3d12", "mono", "xaudio2"],
+        "use_mimalloc": True,
     }
 
 
