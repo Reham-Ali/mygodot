@@ -193,6 +193,7 @@ private:
 	void _update_buttons_state();
 	void _remote_object_selected(ObjectID p_object);
 	void _remote_object_edited(ObjectID, const String &p_prop, const Variant &p_value);
+	void _multi_remote_objects_edited(const TypedArray<int64_t> &p_ids, const String &p_prop, const Variant &p_value, const String &p_field);
 	void _remote_object_property_updated(ObjectID p_id, const String &p_property);
 
 	void _video_mem_request();
@@ -247,8 +248,11 @@ protected:
 
 public:
 	void request_remote_object(ObjectID p_obj_id);
-	void update_remote_object(ObjectID p_obj_id, const String &p_prop, const Variant &p_value);
+	void request_multi_remote_objects(const TypedArray<uint64_t> &p_obj_ids);
+	void update_remote_object(ObjectID p_obj_id, const String &p_prop, const Variant &p_value, const String &p_field = "");
 	Object *get_remote_object(ObjectID p_id);
+
+	void clear_inspector();
 
 	// Needed by _live_edit_set, buttons state.
 	void set_editor_remote_tree(const Tree *p_tree) { editor_remote_tree = p_tree; }
