@@ -212,27 +212,17 @@ static void _unpack_manifold(
 			int32_t first_property_index = mesh.triVerts[vert_i + order[0]];
 			face.smooth = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_SMOOTH_GROUP] > 0.5f;
 			face.invert = mesh.vertProperties[first_property_index * mesh.numProp + MANIFOLD_PROPERTY_INVERT] > 0.5f;
-
 			for (int32_t tri_order_i = 0; tri_order_i < 3; tri_order_i++) {
 				int32_t property_i = mesh.triVerts[vert_i + order[tri_order_i]];
-
 				ERR_FAIL_COND_MSG(property_i * mesh.numProp >= mesh.vertProperties.size(), "Invalid index into vertex properties");
-
 				face.vertices[tri_order_i] = Vector3(
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_X],
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_Y],
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_POSITION_Z]);
-
 				face.uvs[tri_order_i] = Vector2(
 						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_UV_X_0],
-						1.0f - mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_UV_Y_0]);
+						mesh.vertProperties[property_i * mesh.numProp + MANIFOLD_PROPERTY_UV_Y_0]);
 			}
-
-			if (face.invert) {
-				SWAP(face.vertices[1], face.vertices[2]);
-				SWAP(face.uvs[1], face.uvs[2]);
-			}
-
 			r_mesh_merge->faces.push_back(face);
 		}
 	}
@@ -290,15 +280,10 @@ static void _pack_manifold(
 				vert[MANIFOLD_PROPERTY_POSITION_X] = face.vertices[i].x;
 				vert[MANIFOLD_PROPERTY_POSITION_Y] = face.vertices[i].y;
 				vert[MANIFOLD_PROPERTY_POSITION_Z] = face.vertices[i].z;
-				if (face.invert) {
-					vert[MANIFOLD_PROPERTY_UV_X_0] = face.uvs[2 - i].x;
-					vert[MANIFOLD_PROPERTY_UV_Y_0] = 1.0f - face.uvs[2 - i].y;
-				} else {
-					vert[MANIFOLD_PROPERTY_UV_X_0] = face.uvs[i].x;
-					vert[MANIFOLD_PROPERTY_UV_Y_0] = 1.0f - face.uvs[i].y;
-				}
 				vert[MANIFOLD_PROPERTY_SMOOTH_GROUP] = face.smooth ? 1.0f : 0.0f;
 				vert[MANIFOLD_PROPERTY_INVERT] = face.invert ? 1.0f : 0.0f;
+				vert[MANIFOLD_PROPERTY_UV_X_0] = face.uvs[i].x;
+				vert[MANIFOLD_PROPERTY_UV_Y_0] = face.uvs[i].y;
 			}
 		}
 	}
