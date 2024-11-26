@@ -31,6 +31,7 @@
 #ifndef SCENE_TREE_EDITOR_H
 #define SCENE_TREE_EDITOR_H
 
+#include "core/templates/hash_map.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/check_button.h"
 #include "scene/gui/dialogs.h"
@@ -58,6 +59,15 @@ class SceneTreeEditor : public Control {
 		BUTTON_UNIQUE = 9,
 	};
 
+	struct cached_node {
+		TreeItem *item = nullptr;
+		int index = -1;
+		bool dirty = true;
+	};
+
+	HashMap<Node *, cached_node> node_cache;
+	Node *current_scene_node = nullptr;
+
 	Tree *tree = nullptr;
 	Node *selected = nullptr;
 	ObjectID instance_node;
@@ -82,7 +92,9 @@ class SceneTreeEditor : public Control {
 
 	void _compute_hash(Node *p_node, uint64_t &hash);
 
-	void _add_nodes(Node *p_node, TreeItem *p_parent);
+	void _update_nodes(Node *p_node, TreeItem *p_parent);
+	void _update_node(Node *p_node, TreeItem *p_item, bool part_of_subscene);
+
 	void _test_update_tree();
 	bool _update_filter(TreeItem *p_parent = nullptr, bool p_scroll_to_selected = false);
 	bool _item_matches_all_terms(TreeItem *p_item, const PackedStringArray &p_terms);

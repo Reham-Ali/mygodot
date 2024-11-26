@@ -217,7 +217,7 @@ void SceneTreeEditor::_toggle_visible(Node *p_node) {
 	}
 }
 
-void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
+void SceneTreeEditor::_update_nodes(Node *p_node, TreeItem *p_parent) {
 	if (!p_node) {
 		return;
 	}
@@ -238,34 +238,105 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 		part_of_subscene = p_node != get_scene_node() && get_scene_node()->get_scene_inherited_state().is_valid() && get_scene_node()->get_scene_inherited_state()->find_node_by_path(get_scene_node()->get_path_to(p_node)) >= 0;
 	}
 
-	TreeItem *item = tree->create_item(p_parent);
+	TreeItem *item;
+	int node_index = p_node->get_index(false);
+	HashMap<Node *, cached_node>::Iterator I = node_cache.find(p_node);
 
-	item->set_text(0, p_node->get_name());
-	item->set_text_overrun_behavior(0, TextServer::OVERRUN_NO_TRIMMING);
-	if (can_rename && !part_of_subscene) {
-		item->set_editable(0, true);
+	if (I) {
+		item = I->value.item;
+	} else {
+		// We don't set the node_index cache here. As undo/redo might've just recreated this
+		item = tree->create_item(p_parent);
+		node_cache[p_node].item = item;
+		I = node_cache.find(p_node);
 	}
 
-	item->set_selectable(0, true);
+	// Do a quick check to see if we are where we expect to be
+	// We can't only do this when we're dirty as moving one node will necessarily move our siblings
+	if (p_parent && I->value.index != node_index) {
+		TreeItem *new_neigbor = cast_to<TreeItem>(p_parent->get_children().get(node_index));
+
+		if (new_neigbor && new_neigbor != item) {
+			if (node_index == p_parent->get_child_count()) {
+				item->move_after(new_neigbor);
+			} else {
+				item->move_before(new_neigbor);
+			}
+		}
+
+		I->value.index = node_index;
+	}
+
+	if (I->value.dirty) {
+		I->value.dirty = false;
+		_update_node(p_node, item, part_of_subscene);
+	} else {
+		// A parent might have moved/renamed
+		item->set_metadata(0, p_node->get_path());
+	}
+
+	for (int i = 0; i < p_node->get_child_count(); i++) {
+		_update_nodes(p_node->get_child(i), item);
+	}
+
+	if (valid_types.size()) {
+		bool valid = false;
+		for (const StringName &E : valid_types) {
+			if (p_node->is_class(E) ||
+					EditorNode::get_singleton()->is_object_of_custom_type(p_node, E)) {
+				valid = true;
+				break;
+			} else {
+				Ref<Script> node_script = p_node->get_script();
+				while (node_script.is_valid()) {
+					if (node_script->get_path() == E) {
+						valid = true;
+						break;
+					}
+					node_script = node_script->get_base_script();
+				}
+				if (valid) {
+					break;
+				}
+			}
+		}
+
+		if (!valid) {
+			_set_item_custom_color(item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
+			item->set_selectable(0, false);
+		}
+	}
+}
+
+void SceneTreeEditor::_update_node(Node *p_node, TreeItem *p_item, bool part_of_subscene) {
+	p_item->clear_buttons();
+
+	p_item->set_text(0, p_node->get_name());
+	p_item->set_text_overrun_behavior(0, TextServer::OVERRUN_NO_TRIMMING);
+	if (can_rename && !part_of_subscene) {
+		p_item->set_editable(0, true);
+	}
+
+	p_item->set_selectable(0, true);
 	if (can_rename) {
 		bool collapsed = p_node->is_displayed_folded();
 		if (collapsed) {
-			item->set_collapsed(true);
+			p_item->set_collapsed(true);
 		}
 	}
 
 	Ref<Texture2D> icon = EditorNode::get_singleton()->get_object_icon(p_node, "Node");
-	item->set_icon(0, icon);
-	item->set_metadata(0, p_node->get_path());
+	p_item->set_icon(0, icon);
+	p_item->set_metadata(0, p_node->get_path());
 
 	if (connecting_signal) {
 		// Add script icons for all scripted nodes.
 		Ref<Script> scr = p_node->get_script();
 		if (scr.is_valid()) {
-			item->add_button(0, get_editor_theme_icon(SNAME("Script")), BUTTON_SCRIPT);
+			p_item->add_button(0, get_editor_theme_icon(SNAME("Script")), BUTTON_SCRIPT);
 			if (EditorNode::get_singleton()->get_object_custom_type_base(p_node) == scr) {
 				// Disable button on custom scripts (pure visual cue).
-				item->set_button_disabled(0, item->get_button_count(0) - 1, true);
+				p_item->set_button_disabled(0, p_item->get_button_count(0) - 1, true);
 			}
 		}
 	}
@@ -276,8 +347,8 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 		Ref<Script> scr = p_node->get_script();
 		bool has_custom_script = scr.is_valid() && EditorNode::get_singleton()->get_object_custom_type_base(p_node) == scr;
 		if (scr.is_null() || has_custom_script) {
-			_set_item_custom_color(item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
-			item->set_selectable(0, false);
+			_set_item_custom_color(p_item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
+			p_item->set_selectable(0, false);
 
 			accent.a *= 0.7;
 		}
@@ -287,29 +358,29 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 			if (connecting_signal) {
 				node_name += " " + TTR("(Connecting From)");
 			}
-			item->set_text(0, node_name);
-			_set_item_custom_color(item, accent);
+			p_item->set_text(0, node_name);
+			_set_item_custom_color(p_item, accent);
 		}
 	} else if (part_of_subscene) {
 		if (valid_types.size() == 0) {
-			_set_item_custom_color(item, get_theme_color(SNAME("warning_color"), EditorStringName(Editor)));
+			_set_item_custom_color(p_item, get_theme_color(SNAME("warning_color"), EditorStringName(Editor)));
 		}
 	} else if (marked.has(p_node)) {
 		String node_name = p_node->get_name();
 		if (connecting_signal) {
 			node_name += " " + TTR("(Connecting From)");
 		}
-		item->set_text(0, node_name);
-		item->set_selectable(0, marked_selectable);
-		_set_item_custom_color(item, get_theme_color(SNAME("accent_color"), EditorStringName(Editor)));
+		p_item->set_text(0, node_name);
+		p_item->set_selectable(0, marked_selectable);
+		_set_item_custom_color(p_item, get_theme_color(SNAME("accent_color"), EditorStringName(Editor)));
 	} else if (!p_node->can_process()) {
-		_set_item_custom_color(item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
+		_set_item_custom_color(p_item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
 	} else if (!marked_selectable && !marked_children_selectable) {
 		Node *node = p_node;
 		while (node) {
 			if (marked.has(node)) {
-				item->set_selectable(0, false);
-				_set_item_custom_color(item, get_theme_color(SNAME("error_color"), EditorStringName(Editor)));
+				p_item->set_selectable(0, false);
+				_set_item_custom_color(p_item, get_theme_color(SNAME("error_color"), EditorStringName(Editor)));
 				break;
 			}
 			node = node->get_parent();
@@ -340,11 +411,11 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 				all_warnings.remove_at(0); // With only one warning, two newlines do not look great.
 			}
 
-			item->add_button(0, get_editor_theme_icon(warning_icon), BUTTON_WARNING, false, TTR("Node configuration warning:") + all_warnings);
+			p_item->add_button(0, get_editor_theme_icon(warning_icon), BUTTON_WARNING, false, TTR("Node configuration warning:") + all_warnings);
 		}
 
 		if (p_node->is_unique_name_in_owner()) {
-			item->add_button(0, get_editor_theme_icon(SNAME("SceneUniqueName")), BUTTON_UNIQUE, p_node->get_owner() != EditorNode::get_singleton()->get_edited_scene(), vformat(TTR("This node can be accessed from within anywhere in the scene by preceding it with the '%s' prefix in a node path.\nClick to disable this."), UNIQUE_NODE_PREFIX));
+			p_item->add_button(0, get_editor_theme_icon(SNAME("SceneUniqueName")), BUTTON_UNIQUE, p_node->get_owner() != EditorNode::get_singleton()->get_edited_scene(), vformat(TTR("This node can be accessed from within anywhere in the scene by preceding it with the '%s' prefix in a node path.\nClick to disable this."), UNIQUE_NODE_PREFIX));
 		}
 
 		int num_connections = p_node->get_persistent_signal_connection_count();
@@ -389,17 +460,17 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 
 		if (num_connections >= 1 || num_groups >= 1) {
 			msg_temp += msg_temp_end;
-			item->add_button(0, icon_temp, signal_temp, false, msg_temp);
+			p_item->add_button(0, icon_temp, signal_temp, false, msg_temp);
 		}
 	}
 
 	{
-		_update_node_tooltip(p_node, item);
+		_update_node_tooltip(p_node, p_item);
 		Callable delay_update_tooltip = callable_mp(this, &SceneTreeEditor::_queue_update_node_tooltip);
 		if (p_node->is_connected("editor_description_changed", delay_update_tooltip)) {
 			p_node->disconnect("editor_description_changed", delay_update_tooltip);
 		}
-		p_node->connect("editor_description_changed", delay_update_tooltip.bind(item));
+		p_node->connect("editor_description_changed", delay_update_tooltip.bind(p_item));
 	}
 
 	if (can_open_instance && is_scene_tree_dock) { // Show buttons only when necessary (SceneTreeDock) to avoid crashes.
@@ -420,83 +491,51 @@ void SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 				additional_notes += "\n" + TTR("This script is a custom type.");
 				button_color.a = 0.5;
 			}
-			item->add_button(0, get_editor_theme_icon(SNAME("Script")), BUTTON_SCRIPT, false, TTR("Open Script:") + " " + scr->get_path() + additional_notes);
-			item->set_button_color(0, item->get_button_count(0) - 1, button_color);
+			p_item->add_button(0, get_editor_theme_icon(SNAME("Script")), BUTTON_SCRIPT, false, TTR("Open Script:") + " " + scr->get_path() + additional_notes);
+			p_item->set_button_color(0, p_item->get_button_count(0) - 1, button_color);
 		}
 
 		if (p_node->has_meta("_edit_lock_")) {
-			item->add_button(0, get_editor_theme_icon(SNAME("Lock")), BUTTON_LOCK, false, TTR("Node is locked.\nClick to unlock it."));
+			p_item->add_button(0, get_editor_theme_icon(SNAME("Lock")), BUTTON_LOCK, false, TTR("Node is locked.\nClick to unlock it."));
 		}
 		if (p_node->has_meta("_edit_group_")) {
-			item->add_button(0, get_editor_theme_icon(SNAME("Group")), BUTTON_GROUP, false, TTR("Children are not selectable.\nClick to make them selectable."));
+			p_item->add_button(0, get_editor_theme_icon(SNAME("Group")), BUTTON_GROUP, false, TTR("Children are not selectable.\nClick to make them selectable."));
 		}
 
 		if (p_node->has_method("is_visible") && p_node->has_method("set_visible") && p_node->has_signal(SceneStringName(visibility_changed))) {
 			bool is_visible = p_node->call("is_visible");
 			if (is_visible) {
-				item->add_button(0, get_editor_theme_icon(SNAME("GuiVisibilityVisible")), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				p_item->add_button(0, get_editor_theme_icon(SNAME("GuiVisibilityVisible")), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			} else {
-				item->add_button(0, get_editor_theme_icon(SNAME("GuiVisibilityHidden")), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				p_item->add_button(0, get_editor_theme_icon(SNAME("GuiVisibilityHidden")), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			}
 			const Callable vis_changed = callable_mp(this, &SceneTreeEditor::_node_visibility_changed);
 			if (!p_node->is_connected(SceneStringName(visibility_changed), vis_changed)) {
 				p_node->connect(SceneStringName(visibility_changed), vis_changed.bind(p_node));
 			}
-			_update_visibility_color(p_node, item);
+			_update_visibility_color(p_node, p_item);
 		}
 
 		if (p_node->is_class("AnimationMixer")) {
 			bool is_pinned = AnimationPlayerEditor::get_singleton()->get_editing_node() == p_node && AnimationPlayerEditor::get_singleton()->is_pinned();
 
 			if (is_pinned) {
-				item->add_button(0, get_editor_theme_icon(SNAME("Pin")), BUTTON_PIN, false, TTR("AnimationPlayer is pinned.\nClick to unpin."));
+				p_item->add_button(0, get_editor_theme_icon(SNAME("Pin")), BUTTON_PIN, false, TTR("AnimationPlayer is pinned.\nClick to unpin."));
 			}
 		}
 	}
 
 	if (editor_selection) {
 		if (editor_selection->is_selected(p_node)) {
-			item->select(0);
+			p_item->select(0);
 		}
 	}
 
 	if (selected == p_node) {
 		if (!editor_selection) {
-			item->select(0);
+			p_item->select(0);
 		}
-		item->set_as_cursor(0);
-	}
-
-	for (int i = 0; i < p_node->get_child_count(); i++) {
-		_add_nodes(p_node->get_child(i), item);
-	}
-
-	if (valid_types.size()) {
-		bool valid = false;
-		for (const StringName &E : valid_types) {
-			if (p_node->is_class(E) ||
-					EditorNode::get_singleton()->is_object_of_custom_type(p_node, E)) {
-				valid = true;
-				break;
-			} else {
-				Ref<Script> node_script = p_node->get_script();
-				while (node_script.is_valid()) {
-					if (node_script->get_path() == E) {
-						valid = true;
-						break;
-					}
-					node_script = node_script->get_base_script();
-				}
-				if (valid) {
-					break;
-				}
-			}
-		}
-
-		if (!valid) {
-			_set_item_custom_color(item, get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor)));
-			item->set_selectable(0, false);
-		}
+		p_item->set_as_cursor(0);
 	}
 }
 
@@ -594,6 +633,12 @@ void SceneTreeEditor::_set_item_custom_color(TreeItem *p_item, Color p_color) {
 }
 
 void SceneTreeEditor::_node_script_changed(Node *p_node) {
+	HashMap<Node *, cached_node>::Iterator I = node_cache.find(p_node);
+
+	if (I) {
+		I->value.dirty = true;
+	}
+
 	if (tree_dirty) {
 		return;
 	}
@@ -620,11 +665,26 @@ void SceneTreeEditor::_node_removed(Node *p_node) {
 	if (p_node == selected) {
 		selected = nullptr;
 	}
+
+	HashMap<Node *, cached_node>::Iterator I = node_cache.find(p_node);
+	if (I) {
+		TreeItem *item = I->value.item;
+		TreeItem *parent = item->get_parent();
+		if (parent) {
+			parent->remove_child(item);
+		}
+		node_cache.erase(p_node);
+	}
 }
 
 void SceneTreeEditor::_node_renamed(Node *p_node) {
 	if (p_node != get_scene_node() && !get_scene_node()->is_ancestor_of(p_node)) {
 		return;
+	}
+
+	HashMap<Node *, cached_node>::Iterator I = node_cache.find(p_node);
+	if (I) {
+		I->value.dirty = true;
 	}
 
 	emit_signal(SNAME("node_renamed"));
@@ -646,12 +706,21 @@ void SceneTreeEditor::_update_tree(bool p_scroll_to_selected) {
 	}
 
 	updating_tree = true;
-	tree->clear();
+
 	last_hash = hash_djb2_one_64(0);
-	if (get_scene_node()) {
-		_add_nodes(get_scene_node(), nullptr);
+	Node *scene_node = get_scene_node();
+
+	if (scene_node != current_scene_node) {
+		tree->clear();
+		node_cache.clear();
+		current_scene_node = scene_node;
+	}
+
+	if (current_scene_node) {
+		_update_nodes(get_scene_node(), nullptr);
 		_compute_hash(get_scene_node(), last_hash);
 	}
+
 	updating_tree = false;
 	tree_dirty = false;
 
@@ -842,6 +911,7 @@ void SceneTreeEditor::_test_update_tree() {
 	if (get_scene_node()) {
 		_compute_hash(get_scene_node(), hash);
 	}
+
 	//test hash
 	if (hash == last_hash) {
 		return; // did not change
@@ -860,9 +930,11 @@ void SceneTreeEditor::_tree_changed() {
 	if (EditorNode::get_singleton()->is_exiting()) {
 		return; //speed up exit
 	}
+
 	if (pending_test_update) {
 		return;
 	}
+
 	if (tree_dirty) {
 		return;
 	}
@@ -1019,6 +1091,7 @@ void SceneTreeEditor::set_selected(Node *p_node, bool p_emit_selected) {
 	if (pending_test_update) {
 		_test_update_tree();
 	}
+
 	if (tree_dirty) {
 		_update_tree();
 	}
@@ -1072,6 +1145,11 @@ void SceneTreeEditor::set_selected(Node *p_node, bool p_emit_selected) {
 }
 
 void SceneTreeEditor::rename_node(Node *p_node, const String &p_name, TreeItem *p_item) {
+	HashMap<Node *, cached_node>::Iterator I = node_cache.find(p_node);
+	if (I) {
+		I->value.dirty = true;
+	}
+
 	TreeItem *item;
 	if (p_item) {
 		item = p_item; // During batch rename the paths may change, so using _find() is unreliable.
